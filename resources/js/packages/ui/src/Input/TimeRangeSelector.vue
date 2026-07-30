@@ -4,6 +4,7 @@ import DatePicker from '@/packages/ui/src/Input/DatePicker.vue';
 import { getDayJsInstance, getLocalizedDayJs } from '@/packages/ui/src/utils/time';
 import dayjs from 'dayjs';
 import TimePickerSimple from '@/packages/ui/src/Input/TimePickerSimple.vue';
+import QuickHourPicker from '@/packages/ui/src/Input/QuickHourPicker.vue';
 import { Button } from '@/packages/ui/src/Buttons';
 
 const props = defineProps<{
@@ -52,13 +53,28 @@ function confirmEndTime() {
     });
 }
 
+// setQuickDuration applies an "N hours" pick. For a finished entry the end
+// moves to start + N. For a running entry (no end yet) N means "I have been
+// working N hours": the start moves to now - N and the timer keeps running.
+function setQuickDuration(hours: number) {
+    const minutes = Math.round(hours * 60);
+    if (props.end === null && !showEndTimePicker.value) {
+        tempStart.value = getDayJsInstance()().subtract(minutes, 'm').format();
+    } else {
+        tempEnd.value = getDayJsInstance()(tempStart.value).add(minutes, 'm').format();
+    }
+    nextTick(() => {
+        updateTimeEntry();
+        emit('close');
+    });
+}
+
 const dropdownContent = ref();
 </script>
 
 <template>
-    <div
-        ref="dropdownContent"
-        class="grid grid-cols-2 divide-x divide-card-background-separator text-center py-2">
+    <div ref="dropdownContent" class="flex flex-col py-2">
+        <div class="grid grid-cols-2 divide-x divide-card-background-separator text-center">
         <div class="px-2" @keydown.enter.prevent="nextTick(() => emit('close'))">
             <div class="font-semibold text-text-primary text-sm pb-2">Start</div>
             <div class="flex flex-col items-center space-y-2 w-28 mx-auto">
@@ -111,6 +127,11 @@ const dropdownContent = ref();
             </div>
             <div v-else class="text-text-secondary">-- : --</div>
             <div tabindex="0" @focusin="emit('close')"></div>
+        </div>
+        </div>
+        <div class="border-t border-card-background-separator mt-2 pt-2 px-2">
+            <div class="font-semibold text-text-primary text-sm pb-2 text-center">Duration</div>
+            <QuickHourPicker @select="setQuickDuration"></QuickHourPicker>
         </div>
     </div>
 </template>

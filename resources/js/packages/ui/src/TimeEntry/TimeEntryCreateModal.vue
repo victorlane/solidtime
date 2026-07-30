@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '@/packages/ui/src/Buttons';
 import DatePicker from '@/packages/ui/src/Input/DatePicker.vue';
 import DurationHumanInput from '@/packages/ui/src/Input/DurationHumanInput.vue';
+import QuickHourPicker from '@/packages/ui/src/Input/QuickHourPicker.vue';
 
 import { InformationCircleIcon } from '@heroicons/vue/20/solid';
 import type { Tag, Task } from '@/packages/api/src';
@@ -130,6 +131,14 @@ const billableProxy = computed({
         timeEntry.value.billable = value === 'true';
     },
 });
+
+// setQuickDuration moves the end to start + N hours, so a manual entry is
+// two clicks: pick the project, pick the hours.
+function setQuickDuration(hours: number) {
+    localEnd.value = getLocalizedDayJs(localStart.value)
+        .add(Math.round(hours * 60), 'm')
+        .format();
+}
 </script>
 
 <template>
@@ -218,6 +227,7 @@ const billableProxy = computed({
                                 <span class="font-semibold"> 2h 30m</span>
                             </span>
                         </div>
+                        <QuickHourPicker @select="setQuickDuration"></QuickHourPicker>
                     </div>
                 </Field>
                 <Field>
