@@ -20,6 +20,8 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * @property string $id
  * @property string $role
  * @property int|null $billable_rate
+ * @property int|null $weekly_billable_target Weekly billable-hours target in seconds
+ * @property Carbon|null $weekly_target_email_sent_at
  * @property string $organization_id
  * @property string $user_id
  * @property Carbon|null $created_at
@@ -46,6 +48,15 @@ class Member extends Pivot implements AuditableContract
      * @var string
      */
     protected $table = 'members';
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'weekly_target_email_sent_at' => 'datetime',
+    ];
 
     /**
      * @return BelongsTo<User, $this>

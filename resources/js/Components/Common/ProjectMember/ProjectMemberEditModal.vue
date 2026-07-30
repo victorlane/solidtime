@@ -7,6 +7,7 @@ import PrimaryButton from '@/packages/ui/src/Buttons/PrimaryButton.vue';
 import { useFocus } from '@vueuse/core';
 import { useProjectMembersStore } from '@/utils/useProjectMembers';
 import BillableRateInput from '@/packages/ui/src/Input/BillableRateInput.vue';
+import WeeklyTargetInput from '@/packages/ui/src/Input/WeeklyTargetInput.vue';
 import { UserIcon } from '@heroicons/vue/24/solid';
 import ProjectMemberBillableRateModal from '@/Components/Common/ProjectMember/ProjectMemberBillableRateModal.vue';
 import { Field, FieldLabel } from '@/packages/ui/src/field';
@@ -23,6 +24,7 @@ const props = defineProps<{
 
 const projectMemberBody = ref<UpdateProjectMemberBody>({
     billable_rate: props.projectMember.billable_rate,
+    weekly_billable_target: props.projectMember.weekly_billable_target,
 });
 const showBillableRateModal = ref(false);
 async function submit() {
@@ -37,6 +39,7 @@ async function submit() {
     show.value = false;
     projectMemberBody.value = {
         billable_rate: null,
+        weekly_billable_target: null,
     };
 }
 
@@ -52,6 +55,7 @@ watch(
         if (value) {
             projectMemberBody.value = {
                 billable_rate: props.projectMember.billable_rate,
+                weekly_billable_target: props.projectMember.weekly_billable_target,
             };
         }
     }
@@ -89,6 +93,17 @@ useFocus(projectNameInput, { initialValue: true });
                         :currency="getOrganizationCurrencyString()"
                         name="billable_rate"
                         @keydown.enter="submit"></BillableRateInput>
+                </Field>
+            </div>
+            <div class="grid grid-cols-3 items-center space-x-4 pt-4">
+                <Field class="col-span-3 sm:col-span-1">
+                    <FieldLabel for="weekly_billable_target"
+                        >Weekly billable hours target</FieldLabel
+                    >
+                    <WeeklyTargetInput
+                        v-model="projectMemberBody.weekly_billable_target"
+                        name="weekly_billable_target"
+                        @keydown.enter="submit"></WeeklyTargetInput>
                 </Field>
             </div>
         </template>

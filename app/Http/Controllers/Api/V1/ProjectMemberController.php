@@ -76,6 +76,7 @@ class ProjectMemberController extends Controller
 
         $projectMember = new ProjectMember;
         $projectMember->billable_rate = $request->getBillableRate();
+        $projectMember->weekly_billable_target = $request->getWeeklyBillableTarget();
         $projectMember->member()->associate($member);
         $projectMember->user()->associate($member->user);
         $projectMember->project()->associate($project);
@@ -100,6 +101,9 @@ class ProjectMemberController extends Controller
         $this->checkPermission($organization, 'project-members:update', projectMember: $projectMember);
         $oldBillableRate = $projectMember->billable_rate;
         $projectMember->billable_rate = $request->getBillableRate();
+        if ($request->has('weekly_billable_target')) {
+            $projectMember->weekly_billable_target = $request->getWeeklyBillableTarget();
+        }
         $projectMember->save();
 
         if ($oldBillableRate !== $request->getBillableRate()) {

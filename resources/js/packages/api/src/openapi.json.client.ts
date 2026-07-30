@@ -282,11 +282,16 @@ const MemberResource = z
         role: z.string(),
         is_placeholder: z.boolean(),
         billable_rate: z.union([z.number(), z.null()]),
+        weekly_billable_target: z.union([z.number(), z.null()]),
     })
     .passthrough();
 const Role = z.enum(['owner', 'admin', 'manager', 'employee', 'placeholder']);
 const MemberUpdateRequest = z
-    .object({ role: Role, billable_rate: z.union([z.number(), z.null()]) })
+    .object({
+        role: Role,
+        billable_rate: z.union([z.number(), z.null()]),
+        weekly_billable_target: z.union([z.number(), z.null()]),
+    })
     .partial()
     .passthrough();
 const MemberMergeIntoRequest = z.object({ member_id: z.string() }).partial().passthrough();
@@ -400,15 +405,23 @@ const ProjectMemberResource = z
     .object({
         id: z.string(),
         billable_rate: z.union([z.number(), z.null()]),
+        weekly_billable_target: z.union([z.number(), z.null()]),
         member_id: z.string(),
         project_id: z.string(),
     })
     .passthrough();
 const ProjectMemberStoreRequest = z
-    .object({ member_id: z.string(), billable_rate: z.union([z.number(), z.null()]).optional() })
+    .object({
+        member_id: z.string(),
+        billable_rate: z.union([z.number(), z.null()]).optional(),
+        weekly_billable_target: z.union([z.number(), z.null()]).optional(),
+    })
     .passthrough();
 const ProjectMemberUpdateRequest = z
-    .object({ billable_rate: z.union([z.number(), z.null()]) })
+    .object({
+        billable_rate: z.union([z.number(), z.null()]),
+        weekly_billable_target: z.union([z.number(), z.null()]),
+    })
     .partial()
     .passthrough();
 const ReportResource = z

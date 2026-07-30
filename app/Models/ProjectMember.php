@@ -17,6 +17,7 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 /**
  * @property string $id
  * @property int|null $billable_rate
+ * @property int|null $weekly_billable_target Weekly billable-hours target on this project in seconds
  * @property string $project_id Project ID
  * @property string $member_id Member ID
  * @property string $user_id User ID (legacy)
@@ -45,6 +46,7 @@ class ProjectMember extends Model implements AuditableContract
      */
     protected $casts = [
         'billable_rate' => 'int',
+        'weekly_billable_target' => 'int',
     ];
 
     /**
