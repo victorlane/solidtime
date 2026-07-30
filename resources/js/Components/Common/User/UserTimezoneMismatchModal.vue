@@ -1,40 +1,31 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useForm, usePage } from '@inertiajs/vue3';
-import type { User } from '@/types/models';
 import TimezoneMismatchModal from '@/packages/ui/src/TimezoneMismatchModal.vue';
+import { useUserQuery, useUpdateUserMutation } from '@/utils/useUserQuery';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
 
-const page = usePage<{
-    auth: {
-        user: User;
-    };
-}>();
+const { user } = useUserQuery();
+const updateUserMutation = useUpdateUserMutation();
 
-function handleUpdate(timezone: string) {
+async function handleUpdate(timezone: string) {
+    if (!user.value) {
+        return;
+    }
     saving.value = true;
-    const form = useForm({
-        _method: 'PUT',
-        timezone: timezone,
-        name: page.props.auth.user.name,
-        email: page.props.auth.user.email,
-        week_start: page.props.auth.user.week_start,
-    });
-
-    form.post(route('user-profile-information.update'), {
-        errorBag: 'updateProfileInformation',
-        preserveScroll: true,
-        onSuccess: () => {
-            saving.value = false;
-            show.value = false;
-            location.reload();
-        },
-        onError: () => {
-            saving.value = false;
-        },
-    });
+    try {
+        await updateUserMutation.mutateAsync({
+            userId: user.value.id,
+            body: { timezone },
+        });
+        show.value = false;
+        location.reload();
+    } catch {
+        // Notification is handled by the mutation; keep the modal open.
+    } finally {
+        saving.value = false;
+    }
 }
 </script>
 
