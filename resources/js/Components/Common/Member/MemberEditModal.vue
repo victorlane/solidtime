@@ -19,6 +19,7 @@ import MemberRoleSelect from '@/Components/Common/Member/MemberRoleSelect.vue';
 import MemberOwnershipTransferConfirmModal from '@/Components/Common/Member/MemberOwnershipTransferConfirmModal.vue';
 import { getOrganizationCurrencyString } from '@/utils/money';
 import BillableIcon from '@/packages/ui/src/Icons/BillableIcon.vue';
+import WeeklyTargetInput from '@/packages/ui/src/Input/WeeklyTargetInput.vue';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
 
@@ -35,6 +36,7 @@ const memberBody = ref<UpdateMemberBody>({
     // @ts-expect-error - The role value is always valid
     role: props.member.role,
     billable_rate: props.member.billable_rate,
+    weekly_billable_target: props.member.weekly_billable_target,
 });
 
 async function submitBillableRate() {
@@ -193,6 +195,22 @@ const roleDescription = computed(() => {
                                 name="memberBillableRate"
                                 @keydown.enter="saveWithChecks()" />
                         </div>
+                    </Field>
+                </div>
+                <div class="pt-5">
+                    <Field>
+                        <FieldLabel for="weeklyBillableTarget"
+                            >Weekly billable hours target</FieldLabel
+                        >
+                        <WeeklyTargetInput
+                            v-model="memberBody.weekly_billable_target"
+                            name="weeklyBillableTarget"
+                            @keydown.enter="saveWithChecks()" />
+                        <FieldDescription
+                            >Hours per week this member should bill. Leave empty for no target.
+                            Members behind their target get a reminder email before the week
+                            ends.</FieldDescription
+                        >
                     </Field>
                 </div>
             </div>

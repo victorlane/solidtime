@@ -33,6 +33,13 @@ class MemberUpdateRequest extends BaseFormRequest
                 ],
                 $this->moneyRules()
             ),
+            // Weekly billable-hours target in seconds
+            'weekly_billable_target' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:2147483647',
+            ],
         ];
     }
 
@@ -41,6 +48,13 @@ class MemberUpdateRequest extends BaseFormRequest
         $input = $this->input('billable_rate');
 
         return $input !== null && $input !== 0 ? (int) $this->input('billable_rate') : null;
+    }
+
+    public function getWeeklyBillableTarget(): ?int
+    {
+        $input = $this->input('weekly_billable_target');
+
+        return $input !== null && $input !== 0 ? (int) $input : null;
     }
 
     public function getRole(): Role

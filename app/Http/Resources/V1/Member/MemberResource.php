@@ -36,6 +36,8 @@ class MemberResource extends BaseResource
             'is_placeholder' => $this->resource->user->is_placeholder,
             /** @var int|null $billable_rate Billable rate in cents per hour */
             'billable_rate' => $this->resource->billable_rate,
+            /** @var int|null $weekly_billable_target Weekly billable-hours target in seconds */
+            'weekly_billable_target' => $this->resource->weekly_billable_target,
         ];
     }
 }

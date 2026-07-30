@@ -8,6 +8,8 @@ import { useFocus } from '@vueuse/core';
 import { useProjectMembersStore } from '@/utils/useProjectMembers';
 import MemberCombobox from '@/Components/Common/Member/MemberCombobox.vue';
 import BillableRateInput from '@/packages/ui/src/Input/BillableRateInput.vue';
+import WeeklyTargetInput from '@/packages/ui/src/Input/WeeklyTargetInput.vue';
+import { Field, FieldLabel } from '@/packages/ui/src/field';
 import { getOrganizationCurrencyString } from '@/utils/money';
 const { createProjectMember } = useProjectMembersStore();
 const show = defineModel('show', { default: false });
@@ -21,6 +23,7 @@ const props = defineProps<{
 const projectMember = ref<CreateProjectMemberBody>({
     member_id: '',
     billable_rate: null,
+    weekly_billable_target: null,
 });
 
 async function submit() {
@@ -29,6 +32,7 @@ async function submit() {
     projectMember.value = {
         member_id: '',
         billable_rate: null,
+        weekly_billable_target: null,
     };
 }
 
@@ -58,6 +62,16 @@ useFocus(projectNameInput, { initialValue: true });
                         name="billable_rate"
                         :currency="getOrganizationCurrencyString()"></BillableRateInput>
                 </div>
+            </div>
+            <div class="grid grid-cols-3 items-center space-x-4 pt-4">
+                <Field class="col-span-3 sm:col-span-1">
+                    <FieldLabel for="weekly_billable_target"
+                        >Weekly billable hours target</FieldLabel
+                    >
+                    <WeeklyTargetInput
+                        v-model="projectMember.weekly_billable_target"
+                        name="weekly_billable_target"></WeeklyTargetInput>
+                </Field>
             </div>
         </template>
         <template #footer>

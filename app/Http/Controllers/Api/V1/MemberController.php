@@ -92,6 +92,9 @@ class MemberController extends Controller
             $allowOwnerChange = $this->hasPermission($organization, 'members:change-ownership');
             $memberService->changeRole($member, $organization, $newRole, $allowOwnerChange);
         }
+        if ($request->has('weekly_billable_target')) {
+            $member->weekly_billable_target = $request->getWeeklyBillableTarget();
+        }
         $member->save();
 
         return new MemberResource($member);
