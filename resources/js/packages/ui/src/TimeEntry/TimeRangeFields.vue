@@ -4,6 +4,7 @@ import { InformationCircleIcon } from '@heroicons/vue/20/solid';
 import { Field, FieldLabel } from '../field';
 import DatePicker from '@/packages/ui/src/Input/DatePicker.vue';
 import DurationHumanInput from '@/packages/ui/src/Input/DurationHumanInput.vue';
+import QuickHourPicker from '@/packages/ui/src/Input/QuickHourPicker.vue';
 import TimePickerSimple from '@/packages/ui/src/Input/TimePickerSimple.vue';
 import { getLocalizedDayJs } from '@/packages/ui/src/utils/time';
 
@@ -26,6 +27,14 @@ watch(start, (value, oldValue) => {
     );
     end.value = getLocalizedDayJs(value).add(previousDuration, 'second').format();
 });
+
+// setQuickDuration moves the end to start + N hours, so a manual entry is
+// two clicks: pick the project, pick the hours.
+function setQuickDuration(hours: number) {
+    end.value = getLocalizedDayJs(start.value)
+        .add(Math.round(hours * 60), 'm')
+        .format();
+}
 </script>
 
 <template>
@@ -45,6 +54,7 @@ watch(start, (value, oldValue) => {
                         <span class="font-semibold"> 2h 30m</span>
                     </span>
                 </div>
+                <QuickHourPicker @select="setQuickDuration"></QuickHourPicker>
             </div>
         </Field>
         <Field>
