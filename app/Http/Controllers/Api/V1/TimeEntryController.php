@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ExportFormat;
 use App\Enums\Role;
+use App\Enums\TimeEntryType;
 use App\Exceptions\Api\FeatureIsNotAvailableInFreePlanApiException;
 use App\Exceptions\Api\OverlappingTimeEntryApiException;
 use App\Exceptions\Api\PdfRendererIsNotConfiguredException;
@@ -67,7 +68,7 @@ class TimeEntryController extends Controller
 
         $query = TimeEntry::query()
             ->where('organization_id', $organization->getKey())
-            ->where('user_id', $member->user_id)
+            ->where('member_id', $member->getKey())
             ->when($exclude !== null, function (Builder $q) use ($exclude): void {
                 $q->where('id', '!=', $exclude->getKey());
             })
@@ -107,8 +108,8 @@ class TimeEntryController extends Controller
     /**
      * Get time entries in organization
      *
-     * If you only need time entries for a specific user, you can filter by `user_id`.
-     * Users with the permission `time-entries:view:own` can only use this endpoint with their own user ID in the user_id filter.
+     * If you only need time entries for a specific user, you can filter by `member_id`.
+     * Users with the permission `time-entries:view:own` can only use this endpoint with their own member ID in the member_id filter.
      *
      * @return TimeEntryCollection<TimeEntryResource>
      *
@@ -118,16 +119,17 @@ class TimeEntryController extends Controller
      */
     public function index(Organization $organization, TimeEntryIndexRequest $request): JsonResource
     {
-        /** @var Member|null $member */
-        $member = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($member !== null && $member->user_id === Auth::id()) {
+        $member = $this->member($organization);
+        /** @var Member|null $memberFilter */
+        $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
+        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
             $this->checkPermission($organization, 'time-entries:view:own');
         } else {
             $this->checkPermission($organization, 'time-entries:view:all');
         }
 
         $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
-        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $member, $canAccessPremiumFeatures);
+        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures);
 
         $totalCount = $timeEntriesQuery->count();
 
@@ -158,7 +160,7 @@ class TimeEntryController extends Controller
             if ($timeEntries->count() === 0) {
                 Log::warning('User has has more than '.$limit.' time entries on one date', [
                     'date' => $lastDate->toDateString(),
-                    'user_id' => $request->input('user_id'),
+                    'member_id' => $request->input('member_id'),
                     'auth_user_id' => Auth::id(),
                     'limit' => $limit,
                 ]);
@@ -208,6 +210,7 @@ class TimeEntryController extends Controller
         $filter->addTaskIdsFilter($request->input('task_ids'));
         $filter->addClientIdsFilter($request->input('client_ids'));
         $filter->addBillableFilter($request->input('billable'));
+        $filter->addTypeFilter($request->input('type'));
 
         return $filter->get();
     }
@@ -221,9 +224,10 @@ class TimeEntryController extends Controller
      */
     public function indexExport(Organization $organization, TimeEntryIndexExportRequest $request, TimeEntryAggregationService $timeEntryAggregationService): JsonResponse
     {
-        /** @var Member|null $member */
-        $member = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($member !== null && $member->user_id === Auth::id()) {
+        $member = $this->member($organization);
+        /** @var Member|null $memberFilter */
+        $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
+        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
             $this->checkPermission($organization, 'time-entries:view:own');
         } else {
             $this->checkPermission($organization, 'time-entries:view:all');
@@ -240,7 +244,7 @@ class TimeEntryController extends Controller
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
-        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $member, $canAccessPremiumFeatures);
+        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures);
         $timeEntriesQuery->with([
             'task',
             'client',
@@ -263,7 +267,7 @@ class TimeEntryController extends Controller
             if ($viewFile === false) {
                 throw new \LogicException('View file not found');
             }
-            $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
+            $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter);
             $aggregatedData = $timeEntryAggregationService->getAggregatedTimeEntries(
                 $timeEntriesAggregateQuery,
                 null,
@@ -370,9 +374,10 @@ class TimeEntryController extends Controller
      */
     public function aggregate(Organization $organization, TimeEntryAggregateRequest $request, TimeEntryAggregationService $timeEntryAggregationService): array
     {
-        /** @var Member|null $member */
-        $member = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($member !== null && $member->user_id === Auth::id()) {
+        $member = $this->member($organization);
+        /** @var Member|null $memberFilter */
+        $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
+        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
             $this->checkPermission($organization, 'time-entries:view:own');
         } else {
             $this->checkPermission($organization, 'time-entries:view:all');
@@ -383,7 +388,7 @@ class TimeEntryController extends Controller
 
         $group1Type = $request->getGroup();
         $group2Type = $request->getSubGroup();
-        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
+        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
@@ -419,9 +424,10 @@ class TimeEntryController extends Controller
      */
     public function aggregateExport(Organization $organization, TimeEntryAggregateExportRequest $request, TimeEntryAggregationService $timeEntryAggregationService): JsonResponse
     {
-        /** @var Member|null $member */
-        $member = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($member !== null && $member->user_id === Auth::id()) {
+        $member = $this->member($organization);
+        /** @var Member|null $memberFilter */
+        $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
+        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
             $this->checkPermission($organization, 'time-entries:view:own');
         } else {
             $this->checkPermission($organization, 'time-entries:view:all');
@@ -437,7 +443,7 @@ class TimeEntryController extends Controller
 
         $group = $request->getGroup();
         $subGroup = $request->getSubGroup();
-        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
+        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
@@ -564,6 +570,7 @@ class TimeEntryController extends Controller
         $filter->addTaskIdsFilter($request->input('task_ids'));
         $filter->addClientIdsFilter($request->input('client_ids'));
         $filter->addBillableFilter($request->input('billable'));
+        $filter->addTypeFilter($request->input('type'));
 
         return $filter->get();
     }
@@ -580,7 +587,7 @@ class TimeEntryController extends Controller
     {
         /** @var Member $member */
         $member = Member::query()->findOrFail($request->input('member_id'));
-        if ($member->user_id === Auth::id()) {
+        if ($member->getKey() === $this->member($organization)->getKey()) {
             $this->checkPermission($organization, 'time-entries:create:own');
         } else {
             $this->checkPermission($organization, 'time-entries:create:all');
@@ -627,9 +634,10 @@ class TimeEntryController extends Controller
      */
     public function update(Organization $organization, TimeEntry $timeEntry, TimeEntryUpdateRequest $request): JsonResource
     {
-        /** @var Member|null $member */
-        $member = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($timeEntry->member->user_id === Auth::id() && ($member === null || $member->user_id === Auth::id())) {
+        $member = $this->member($organization);
+        /** @var Member|null $newMember */
+        $newMember = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
+        if ($timeEntry->member_id === $member->getKey() && ($newMember === null || $newMember->getKey() === $member->getKey())) {
             $this->checkPermission($organization, 'time-entries:update:own', $timeEntry);
         } else {
             $this->checkPermission($organization, 'time-entries:update:all', $timeEntry);
@@ -661,6 +669,10 @@ class TimeEntryController extends Controller
         }
 
         $timeEntry->fill($request->validated());
+        if ($newMember !== null) {
+            $timeEntry->member()->associate($newMember);
+            $timeEntry->user()->associate($newMember->user);
+        }
         $timeEntry->description = $request->input('description', $timeEntry->description) ?? '';
         $timeEntry->setComputedAttributeValue('billable_rate');
         $timeEntry->save();
@@ -690,6 +702,7 @@ class TimeEntryController extends Controller
      */
     public function updateMultiple(Organization $organization, TimeEntryUpdateMultipleRequest $request): JsonResponse
     {
+        $member = $this->member($organization);
         $this->checkAnyPermission($organization, ['time-entries:update:all', 'time-entries:update:own']);
         $canAccessAll = $this->hasPermission($organization, 'time-entries:update:all');
 
@@ -713,6 +726,9 @@ class TimeEntryController extends Controller
         if (isset($changes['member_id']) && ! $canAccessAll && $this->member($organization)->getKey() !== $changes['member_id']) {
             throw new AuthorizationException;
         }
+
+        /** @var Member|null $newMember */
+        $newMember = isset($changes['member_id']) ? Member::query()->findOrFail($changes['member_id']) : null;
 
         $project = null;
         $client = null;
@@ -740,16 +756,33 @@ class TimeEntryController extends Controller
 
                 continue;
             }
-            if (! $canAccessAll && $timeEntry->user_id !== Auth::id()) {
+            if (! $canAccessAll && $timeEntry->member_id !== $member->getKey()) {
                 $error->push($id);
 
                 continue;
 
             }
+            // Changing time entries to Break entries is only allowed when breaks are enabled in the org settings
+            $resultingType = isset($changes['type']) ? TimeEntryType::from($changes['type']) : $timeEntry->type;
+            if ($resultingType === TimeEntryType::Break && $timeEntry->type !== TimeEntryType::Break && ! $organization->breaks_enabled) {
+                $error->push($id);
+
+                continue;
+            }
+            // Break entries can not be billable, have tags or belong to a project/task (see TimeEntry::booted)
+            if ($resultingType === TimeEntryType::Break && ($project !== null || $task !== null || $request->boolean('changes.billable') || count($changes['tags'] ?? []) > 0)) {
+                $error->push($id);
+
+                continue;
+            }
             $oldProject = $timeEntry->project;
             $oldTask = $timeEntry->task;
 
             $timeEntry->fill($changes);
+            if ($newMember !== null) {
+                $timeEntry->member()->associate($newMember);
+                $timeEntry->user_id = $newMember->user_id;
+            }
             // If project is changed, but task is not, we remove the old task from the time entry
             if ($oldProject !== null && $project !== null && $oldProject->isNot($project) && $task === null) {
                 $timeEntry->task()->disassociate();
@@ -790,7 +823,8 @@ class TimeEntryController extends Controller
      */
     public function destroy(Organization $organization, TimeEntry $timeEntry): JsonResponse
     {
-        if ($timeEntry->member->user_id === Auth::id()) {
+        $member = $this->member($organization);
+        if ($timeEntry->member_id === $member->getKey()) {
             $this->checkPermission($organization, 'time-entries:delete:own', $timeEntry);
         } else {
             $this->checkPermission($organization, 'time-entries:delete:all', $timeEntry);
@@ -847,7 +881,7 @@ class TimeEntryController extends Controller
                 continue;
             }
 
-            if (! $canDeleteAll && $timeEntry->user_id !== Auth::id()) {
+            if (! $canDeleteAll && $timeEntry->member_id !== $this->member($organization)->getKey()) {
                 $error->push($id);
 
                 continue;

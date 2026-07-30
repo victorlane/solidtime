@@ -6,17 +6,43 @@ import {
     formatWeekday,
 } from '@/packages/ui/src/utils/time';
 import Checkbox from '../Input/Checkbox.vue';
-import { inject, type ComputedRef } from 'vue';
+import { computed, inject, type ComputedRef } from 'vue';
 import type { Organization } from '@/packages/api/src';
 import { CalendarIcon } from '@heroicons/vue/20/solid';
 
 const organization = inject<ComputedRef<Organization>>('organization');
 
-defineProps<{
-    date: string;
-    duration: number;
-    checked: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        date: string;
+        duration: number;
+        checked: boolean;
+        breakDuration?: number;
+    }>(),
+    {
+        breakDuration: 0,
+    }
+);
+
+const hasBreak = computed(() => props.breakDuration > 0);
+
+function formatDuration(seconds: number) {
+    return formatHumanReadableDuration(
+        seconds,
+        organization?.value?.interval_format,
+        organization?.value?.number_format
+    );
+}
+
+// Without breaks the work time stands alone, so it needs no label. Once break
+// time joins it, both halves are labelled to keep them apart. The separator and
+// its spacing live inside the interpolated strings so the markup cannot collapse
+// them away.
+const workLabel = computed(() =>
+    hasBreak.value ? `${formatDuration(props.duration)} work` : formatDuration(props.duration)
+);
+const breakLabel = computed(() => ` · ${formatDuration(props.breakDuration)} break`);
+
 const emit = defineEmits<{
     selectAll: [];
     unselectAll: [];
@@ -54,16 +80,14 @@ function selectUnselectAll(value: boolean) {
                         {{ formatDate(date, organization?.date_format) }}
                     </span>
                 </div>
-                <div class="text-text-primary pr-2 @lg:pr-[92px]">
-                    <span class="font-medium">
-                        {{
-                            formatHumanReadableDuration(
-                                duration,
-                                organization?.interval_format,
-                                organization?.number_format
-                            )
-                        }}
-                    </span>
+                <div class="flex items-center text-text-primary pr-2 @lg:pr-[92px]">
+                    <span class="font-medium">{{ workLabel }}</span>
+                    <span
+                        v-if="hasBreak"
+                        data-testid="day_break_duration"
+                        class="text-text-secondary font-normal whitespace-pre"
+                        >{{ breakLabel }}</span
+                    >
                 </div>
             </div>
         </MainContainer>

@@ -18,6 +18,7 @@ import {
     workDayStartOn,
     type FreeWindow,
 } from './cellMath';
+import { useBreakPlacement, type PlaceBreakResult } from './useBreakPlacement';
 
 export type CellSaveStatus = 'saving' | 'saved' | 'error';
 
@@ -53,7 +54,8 @@ export function useTimesheetCellMutations(
     weekDays: Ref<string[]>,
     timeEntries: Ref<TimeEntry[]>,
     rows: Ref<TimesheetRow[]>,
-    removeSlot: (key: TimesheetRowKey) => void
+    removeSlot: (key: TimesheetRowKey) => void,
+    preventOverlappingTimeEntries: () => boolean = () => false
 ) {
     const dayjs = getDayJsInstance();
     const queryClient = useQueryClient();
@@ -64,6 +66,20 @@ export function useTimesheetCellMutations(
     const cellStatus = ref<Record<string, CellSaveStatus>>({});
     const cellPendingSeconds = ref<Record<string, number>>({});
     const statusClearTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+
+    // Break placement (positioning a break relative to work, plus the split/move
+    // modal flow) is its own subsystem — it borrows the generic entry primitives
+    // below (hoisted function declarations, so referenceable here).
+    const { breakPlacementRequest, placeBreak, dismissBreakPlacement, applyBreakPlacement } =
+        useBreakPlacement({
+            weekDays,
+            timeEntries,
+            requireOrgId,
+            createCell,
+            updateEntry,
+            deleteEntry,
+            preventOverlappingTimeEntries,
+        });
 
     function clearStatusTimer(key: string): void {
         clearTimeout(statusClearTimers[key]);
@@ -118,7 +134,14 @@ export function useTimesheetCellMutations(
         const wasEmpty = row.totalSeconds === 0;
 
         try {
-            await dispatchCellUpdate(row, dayIndex, newTotalSeconds);
+            const result = await dispatchCellUpdate(row, dayIndex, newTotalSeconds);
+            if (result === 'needs-input') {
+                // The placement modal owns the actual save, so return the cell to idle.
+                clearStatusTimer(statusKey);
+                delete cellStatus.value[statusKey];
+                delete cellPendingSeconds.value[statusKey];
+                return;
+            }
 
             if (wasEmpty && newTotalSeconds > 0 && hasDuplicateIdentitySlot(row)) {
                 removeSlot(row.key);
@@ -155,11 +178,11 @@ export function useTimesheetCellMutations(
     }
 
     function hasDuplicateIdentitySlot(row: TimesheetRow): boolean {
-        const target = makeRowKey(row.projectId, row.taskId, row.billable, row.tags);
+        const target = makeRowKey(row.projectId, row.taskId, row.billable, row.tags, row.type);
         return rows.value.some(
             (r) =>
                 r.key !== row.key &&
-                makeRowKey(r.projectId, r.taskId, r.billable, r.tags) === target
+                makeRowKey(r.projectId, r.taskId, r.billable, r.tags, r.type) === target
         );
     }
 
@@ -167,27 +190,49 @@ export function useTimesheetCellMutations(
         row: TimesheetRow,
         dayIndex: number,
         newTotalSeconds: number
-    ): Promise<void> {
+    ): Promise<PlaceBreakResult> {
         const cell = row.cells.get(dayIndex);
         const existingSeconds = cell?.totalSeconds ?? 0;
         const diff = newTotalSeconds - existingSeconds;
 
         if (newTotalSeconds === 0 && cell) {
             await deleteCell(cell);
-            return;
+            return 'committed';
         }
 
         if (!cell || existingSeconds === 0) {
+            // Breaks are placed relative to work (within tolerance), not just in the
+            // first free slot, and may need the placement modal to resolve.
+            if (row.type === 'break' && newTotalSeconds > 0) {
+                return placeBreak(row, dayIndex, newTotalSeconds);
+            }
             await createCell(row, dayIndex, newTotalSeconds);
-            return;
+            return 'committed';
+        }
+
+        // Re-place breaks rather than extend/shrink them, which would fragment a break into
+        // a second entry. A day's breaks share one cell: a single break re-places at the new
+        // total; growing a multi-break cell grows the latest-ending break in place (others
+        // become obstacles); shrinking just trims the tail, which can't fragment.
+        if (row.type === 'break') {
+            if (cell.entries.length === 1) {
+                return placeBreak(row, dayIndex, newTotalSeconds, cell.entries[0]!.id);
+            }
+            const tail = pickLatestEndedEntry(cell);
+            if (diff > 0 && tail?.end) {
+                return placeBreak(row, dayIndex, (tail.duration ?? 0) + diff, tail.id);
+            }
+            await shrinkFromEnd(cell, -diff);
+            return 'committed';
         }
 
         if (diff > 0) {
             await extendCell(row, dayIndex, cell, diff);
-            return;
+            return 'committed';
         }
 
         await shrinkFromEnd(cell, -diff);
+        return 'committed';
     }
 
     async function deleteCell(cell: TimesheetCell): Promise<void> {
@@ -241,6 +286,7 @@ export function useTimesheetCellMutations(
             start: window.start,
             end: window.end,
             billable: row.billable,
+            type: row.type,
             description: null,
             tags: row.tags,
         };
@@ -371,5 +417,12 @@ export function useTimesheetCellMutations(
         return best;
     }
 
-    return { handleCellUpdate, cellStatus, cellPendingSeconds };
+    return {
+        handleCellUpdate,
+        cellStatus,
+        cellPendingSeconds,
+        breakPlacementRequest,
+        applyBreakPlacement,
+        dismissBreakPlacement,
+    };
 }

@@ -12,6 +12,7 @@ use App\Http\Resources\V1\Client\ClientCollection;
 use App\Http\Resources\V1\Client\ClientResource;
 use App\Models\Client;
 use App\Models\Organization;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -69,12 +70,16 @@ class ClientController extends Controller
      *
      * @operationId createClient
      */
+    #[BodyParameter('metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the client to external systems (`{"external_id": "12345"}`). Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function store(Organization $organization, ClientStoreRequest $request): ClientResource
     {
         $this->checkPermission($organization, 'clients:create');
 
         $client = new Client;
         $client->name = $request->input('name');
+        if ($request->has('metadata')) {
+            $client->metadata = $request->getMetadata();
+        }
         $client->organization()->associate($organization);
         $client->save();
 
@@ -88,6 +93,7 @@ class ClientController extends Controller
      *
      * @operationId updateClient
      */
+    #[BodyParameter('metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the client to external systems (`{"external_id": "12345"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function update(Organization $organization, Client $client, ClientUpdateRequest $request): ClientResource
     {
         $this->checkPermission($organization, 'clients:update', $client);
@@ -95,6 +101,9 @@ class ClientController extends Controller
         $client->name = $request->input('name');
         if ($request->has('is_archived')) {
             $client->archived_at = $request->getIsArchived() ? Carbon::now() : null;
+        }
+        if ($request->has('metadata')) {
+            $client->metadata = $request->getMetadata();
         }
         $client->save();
 

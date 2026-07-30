@@ -29,13 +29,23 @@ const ClientResource = z
         id: z.string(),
         name: z.string(),
         is_archived: z.boolean(),
+        metadata: z.record(z.string()),
         created_at: z.string(),
         updated_at: z.string(),
     })
     .passthrough();
-const ClientStoreRequest = z.object({ name: z.string().min(1).max(255) }).passthrough();
+const ClientStoreRequest = z
+    .object({
+        name: z.string().min(1).max(255),
+        metadata: z.union([z.record(z.string().max(500)), z.null()]).optional(),
+    })
+    .passthrough();
 const ClientUpdateRequest = z
-    .object({ name: z.string().min(1).max(255), is_archived: z.boolean().optional() })
+    .object({
+        name: z.string().min(1).max(255),
+        is_archived: z.boolean().optional(),
+        metadata: z.union([z.record(z.string().max(500)), z.null()]).optional(),
+    })
     .passthrough();
 const DestroyWithPasswordRequest = z.object({ password: z.string() }).passthrough();
 const ImportRequest = z.object({ type: z.string(), data: z.string() }).passthrough();
@@ -319,6 +329,7 @@ const OrganizationResource = z
         employees_can_see_billable_rates: z.boolean(),
         employees_can_manage_tasks: z.boolean(),
         prevent_overlapping_time_entries: z.boolean(),
+        breaks_enabled: z.boolean(),
         currency: z.string(),
         currency_symbol: z.string(),
         number_format: NumberFormat,
@@ -336,6 +347,7 @@ const OrganizationUpdateRequest = z
         employees_can_see_billable_rates: z.boolean(),
         employees_can_manage_tasks: z.boolean(),
         prevent_overlapping_time_entries: z.boolean(),
+        breaks_enabled: z.boolean(),
         number_format: NumberFormat,
         currency_format: CurrencyFormat,
         date_format: DateFormat,
@@ -356,6 +368,7 @@ const ProjectResource = z
         estimated_time: z.union([z.number(), z.null()]),
         spent_time: z.number().int(),
         is_public: z.boolean(),
+        metadata: z.record(z.string()),
     })
     .passthrough();
 const ProjectStoreRequest = z
@@ -367,6 +380,7 @@ const ProjectStoreRequest = z
         client_id: z.union([z.string(), z.null()]).optional(),
         estimated_time: z.union([z.number(), z.null()]).optional(),
         is_public: z.boolean().optional(),
+        metadata: z.union([z.record(z.string().max(500)), z.null()]).optional(),
     })
     .passthrough();
 const ProjectUpdateRequest = z
@@ -379,6 +393,7 @@ const ProjectUpdateRequest = z
         client_id: z.union([z.string(), z.null()]).optional(),
         billable_rate: z.union([z.number(), z.null()]).optional(),
         estimated_time: z.union([z.number(), z.null()]).optional(),
+        metadata: z.union([z.record(z.string().max(500)), z.null()]).optional(),
     })
     .passthrough();
 const ProjectMemberResource = z
@@ -420,6 +435,7 @@ const TimeEntryAggregationType = z.enum([
     'billable',
     'description',
     'tag',
+    'type',
 ]);
 const TimeEntryAggregationTypeInterval = z.enum(['day', 'week', 'month', 'year']);
 const Weekday = z.enum([
@@ -479,6 +495,7 @@ const DetailedReportResource = z
                 active: z.union([z.boolean(), z.null()]),
                 member_ids: z.union([z.array(z.string()), z.null()]),
                 billable: z.union([z.boolean(), z.null()]),
+                time_entry_type: z.union([z.enum(['work', 'break']), z.null()]),
                 client_ids: z.union([z.array(z.string()), z.null()]),
                 project_ids: z.union([z.array(z.string()), z.null()]),
                 tag_ids: z.union([z.array(z.string()), z.null()]),
@@ -631,6 +648,7 @@ const TaskUpdateRequest = z
     .passthrough();
 const start = z.union([z.string(), z.null()]).optional();
 const rounding_minutes = z.union([z.number(), z.null()]).optional();
+const TimeEntryType = z.enum(['work', 'break']);
 const TimeEntryResource = z
     .object({
         id: z.string(),
@@ -644,6 +662,7 @@ const TimeEntryResource = z
         user_id: z.string(),
         tags: z.array(z.string()),
         billable: z.boolean(),
+        type: TimeEntryType,
     })
     .passthrough();
 const TimeEntryStoreRequest = z
@@ -654,6 +673,7 @@ const TimeEntryStoreRequest = z
         start: z.string(),
         end: z.union([z.string(), z.null()]).optional(),
         billable: z.boolean(),
+        type: TimeEntryType.optional(),
         description: z.union([z.string(), z.null()]).optional(),
         tags: z.union([z.array(z.string()), z.null()]).optional(),
     })
@@ -667,6 +687,7 @@ const TimeEntryUpdateMultipleRequest = z
                 project_id: z.union([z.string(), z.null()]),
                 task_id: z.union([z.string(), z.null()]),
                 billable: z.boolean(),
+                type: TimeEntryType,
                 description: z.union([z.string(), z.null()]),
                 tags: z.union([z.array(z.string()), z.null()]),
             })
@@ -682,6 +703,7 @@ const TimeEntryUpdateRequest = z
         start: z.string(),
         end: z.union([z.string(), z.null()]),
         billable: z.boolean(),
+        type: TimeEntryType,
         description: z.union([z.string(), z.null()]),
         tags: z.union([z.array(z.string()), z.null()]),
     })
@@ -774,6 +796,7 @@ export const schemas = {
     TaskUpdateRequest,
     start,
     rounding_minutes,
+    TimeEntryType,
     TimeEntryResource,
     TimeEntryStoreRequest,
     TimeEntryUpdateMultipleRequest,
@@ -3737,6 +3760,11 @@ Users with the permission &#x60;time-entries:view:own&#x60; can only use this en
                 schema: z.enum(['true', 'false']).optional(),
             },
             {
+                name: 'type',
+                type: 'Query',
+                schema: TimeEntryType.optional(),
+            },
+            {
                 name: 'limit',
                 type: 'Query',
                 schema: z.number().int().gte(1).lte(500).optional(),
@@ -3895,7 +3923,9 @@ Users with the permission &#x60;time-entries:view:own&#x60; can only use this en
                 schema: z.string(),
             },
         ],
-        response: z.object({ success: z.string(), error: z.string() }).passthrough(),
+        response: z
+            .object({ success: z.array(z.string()), error: z.array(z.string()) })
+            .passthrough(),
         errors: [
             {
                 status: 401,
@@ -4085,6 +4115,7 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                         'billable',
                         'description',
                         'tag',
+                        'type',
                     ])
                     .optional(),
             },
@@ -4104,6 +4135,7 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                         'billable',
                         'description',
                         'tag',
+                        'type',
                     ])
                     .optional(),
             },
@@ -4136,6 +4168,11 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 name: 'billable',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
+            },
+            {
+                name: 'type',
+                type: 'Query',
+                schema: TimeEntryType.optional(),
             },
             {
                 name: 'fill_gaps_in_time_groups',
@@ -4277,6 +4314,7 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                     'billable',
                     'description',
                     'tag',
+                    'type',
                 ]),
             },
             {
@@ -4294,6 +4332,7 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                     'billable',
                     'description',
                     'tag',
+                    'type',
                 ]),
             },
             {
@@ -4330,6 +4369,11 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 name: 'billable',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
+            },
+            {
+                name: 'type',
+                type: 'Query',
+                schema: TimeEntryType.optional(),
             },
             {
                 name: 'fill_gaps_in_time_groups',
@@ -4458,6 +4502,11 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 name: 'billable',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
+            },
+            {
+                name: 'type',
+                type: 'Query',
+                schema: TimeEntryType.optional(),
             },
             {
                 name: 'limit',
