@@ -1200,7 +1200,7 @@ class ProjectEndpointTest extends ApiEndpointTestAbstract
             'is_billable' => $project->is_billable,
             'client_id' => null,
             'metadata' => [
-                'stripe_product_id' => 'prod_123456789',
+                'external_id' => '12345',
             ],
         ]);
 
@@ -1208,10 +1208,10 @@ class ProjectEndpointTest extends ApiEndpointTestAbstract
         $response->assertStatus(200);
         $response->assertJson(fn (AssertableJson $json) => $json
             ->has('data')
-            ->where('data.metadata.stripe_product_id', 'prod_123456789')
+            ->where('data.metadata.external_id', '12345')
         );
         $project->refresh();
-        $this->assertSame(['stripe_product_id' => 'prod_123456789'], $project->metadata);
+        $this->assertSame(['external_id' => '12345'], $project->metadata);
     }
 
     public function test_update_endpoint_can_make_a_private_project_public(): void

@@ -27,7 +27,7 @@ class BaseFormRequest extends FormRequest
     }
 
     /**
-     * Validation rules for a metadata object (string keys, string values, f.e. for external references like Stripe IDs).
+     * Validation rules for a metadata object (string keys, string values, f.e. for references to external systems).
      *
      * @return array<string, list<string>>
      */

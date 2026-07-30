@@ -50,7 +50,7 @@ class ProjectResource extends BaseResource
             'spent_time' => $this->resource->spent_time,
             /** @var bool $is_public Whether the project is public */
             'is_public' => $this->resource->is_public,
-            /** @var array<string, string> $metadata Custom metadata key-value pairs (f.e. external references like Stripe IDs) */
+            /** @var array<string, string> $metadata Custom metadata as key-value pairs, f.e. for linking the project to external systems */
             'metadata' => $this->resource->metadata ?? [],
         ];
     }

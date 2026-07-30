@@ -27,7 +27,7 @@ class ClientResource extends BaseResource
             'name' => $this->resource->name,
             /** @var bool $is_archived Whether the client is archived */
             'is_archived' => $this->resource->is_archived,
-            /** @var array<string, string> $metadata Custom metadata key-value pairs (f.e. external references like Stripe IDs) */
+            /** @var array<string, string> $metadata Custom metadata as key-value pairs, f.e. for linking the client to external systems */
             'metadata' => $this->resource->metadata ?? [],
             /** @var string $created_at When the tag was created */
             'created_at' => $this->formatDateTime($this->resource->created_at),

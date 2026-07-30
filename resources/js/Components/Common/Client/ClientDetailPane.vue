@@ -183,8 +183,8 @@ function deleteClient() {
                 >
             </div>
             <p class="text-text-secondary text-xs">
-                Key-value pairs to link this client to external systems, f.e. a Stripe customer via
-                <span class="font-mono">stripe_customer_id</span>.
+                Key-value pairs to link this client to external systems, f.e. via an
+                <span class="font-mono">external_id</span>.
             </p>
             <div v-if="metadataEntries.length === 0" class="text-text-secondary text-sm py-2">
                 No metadata yet.

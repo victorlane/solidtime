@@ -926,9 +926,9 @@
                                                     "object",
                                                     "null"
                                                 ],
-                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the client to external systems like Stripe (`{\"stripe_customer_id\": \"cus_123\"}`). Max. 50 keys, values max. 500 characters.",
+                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the client to external systems (`{\"external_id\": \"12345\"}`). Max. 50 keys, values max. 500 characters.",
                                                 "example": {
-                                                    "stripe_customer_id": "cus_123"
+                                                    "external_id": "12345"
                                                 },
                                                 "additionalProperties": {
                                                     "type": "string"
@@ -1018,9 +1018,9 @@
                                                     "object",
                                                     "null"
                                                 ],
-                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the client to external systems like Stripe (`{\"stripe_customer_id\": \"cus_123\"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.",
+                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the client to external systems (`{\"external_id\": \"12345\"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.",
                                                 "example": {
-                                                    "stripe_customer_id": "cus_123"
+                                                    "external_id": "12345"
                                                 },
                                                 "additionalProperties": {
                                                     "type": "string"
@@ -2636,9 +2636,9 @@
                                                     "object",
                                                     "null"
                                                 ],
-                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the project to external systems like Stripe (`{\"stripe_product_id\": \"prod_123\"}`). Max. 50 keys, values max. 500 characters.",
+                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the project to external systems (`{\"external_id\": \"12345\"}`). Max. 50 keys, values max. 500 characters.",
                                                 "example": {
-                                                    "stripe_product_id": "prod_123"
+                                                    "external_id": "12345"
                                                 },
                                                 "additionalProperties": {
                                                     "type": "string"
@@ -2784,9 +2784,9 @@
                                                     "object",
                                                     "null"
                                                 ],
-                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the project to external systems like Stripe (`{\"stripe_product_id\": \"prod_123\"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.",
+                                                "description": "Custom metadata as key-value string pairs, f.e. for linking the project to external systems (`{\"external_id\": \"12345\"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.",
                                                 "example": {
-                                                    "stripe_product_id": "prod_123"
+                                                    "external_id": "12345"
                                                 },
                                                 "additionalProperties": {
                                                     "type": "string"
@@ -6452,7 +6452,7 @@
                     },
                     "metadata": {
                         "type": "object",
-                        "description": "Custom metadata key-value pairs (f.e. external references like Stripe IDs)",
+                        "description": "Custom metadata as key-value pairs, f.e. for linking the client to external systems",
                         "additionalProperties": {
                             "type": "string"
                         }
@@ -7566,7 +7566,7 @@
                     },
                     "metadata": {
                         "type": "object",
-                        "description": "Custom metadata key-value pairs (f.e. external references like Stripe IDs)",
+                        "description": "Custom metadata as key-value pairs, f.e. for linking the project to external systems",
                         "additionalProperties": {
                             "type": "string"
                         }

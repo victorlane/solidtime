@@ -273,7 +273,7 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
         $response = $this->postJson(route('api.v1.clients.store', [$data->organization->getKey()]), [
             'name' => $clientFake->name,
             'metadata' => [
-                'stripe_customer_id' => 'cus_123456789',
+                'external_id' => '12345',
             ],
         ]);
 
@@ -281,7 +281,7 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
         $response->assertStatus(201);
         $response->assertJson(fn (AssertableJson $json) => $json
             ->has('data')
-            ->where('data.metadata.stripe_customer_id', 'cus_123456789')
+            ->where('data.metadata.external_id', '12345')
         );
         $this->assertDatabaseHas(Client::class, [
             'name' => $clientFake->name,
@@ -475,7 +475,7 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
         $response = $this->putJson(route('api.v1.clients.update', [$data->organization->getKey(), $client->getKey()]), [
             'name' => $client->name,
             'metadata' => [
-                'stripe_customer_id' => 'cus_123456789',
+                'external_id' => '12345',
             ],
         ]);
 
@@ -483,10 +483,10 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
         $response->assertStatus(200);
         $response->assertJson(fn (AssertableJson $json) => $json
             ->has('data')
-            ->where('data.metadata.stripe_customer_id', 'cus_123456789')
+            ->where('data.metadata.external_id', '12345')
         );
         $client->refresh();
-        $this->assertSame(['stripe_customer_id' => 'cus_123456789'], $client->metadata);
+        $this->assertSame(['external_id' => '12345'], $client->metadata);
     }
 
     public function test_update_endpoint_can_remove_metadata_with_null(): void
@@ -496,7 +496,7 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
             'clients:update',
         ]);
         $client = Client::factory()->forOrganization($data->organization)->create();
-        $client->metadata = ['stripe_customer_id' => 'cus_123456789'];
+        $client->metadata = ['external_id' => '12345'];
         $client->save();
         Passport::actingAs($data->user);
 
@@ -523,7 +523,7 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
             'clients:update',
         ]);
         $client = Client::factory()->forOrganization($data->organization)->create();
-        $client->metadata = ['stripe_customer_id' => 'cus_123456789'];
+        $client->metadata = ['external_id' => '12345'];
         $client->save();
         $clientFake = Client::factory()->make();
         Passport::actingAs($data->user);
@@ -536,7 +536,7 @@ class ClientEndpointTest extends ApiEndpointTestAbstract
         // Assert
         $response->assertStatus(200);
         $client->refresh();
-        $this->assertSame(['stripe_customer_id' => 'cus_123456789'], $client->metadata);
+        $this->assertSame(['external_id' => '12345'], $client->metadata);
     }
 
     public function test_update_endpoint_fails_if_metadata_value_is_not_a_string(): void
