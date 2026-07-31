@@ -213,6 +213,11 @@ class TimeEntryController extends Controller
         $filter->addClientIdsFilter($request->input('client_ids'));
         $filter->addBillableFilter($request->input('billable'));
         $filter->addTypeFilter($request->input('type'));
+        $filter->addMetadataFilter(
+            $request->input('metadata_key'),
+            $request->input('metadata_value'),
+            $request->input('metadata_exists', 'true') !== 'false',
+        );
 
         return $filter->get();
     }
@@ -577,6 +582,11 @@ class TimeEntryController extends Controller
         $filter->addClientIdsFilter($request->input('client_ids'));
         $filter->addBillableFilter($request->input('billable'));
         $filter->addTypeFilter($request->input('type'));
+        $filter->addMetadataFilter(
+            $request->input('metadata_key'),
+            $request->input('metadata_value'),
+            $request->input('metadata_exists', 'true') !== 'false',
+        );
 
         return $filter->get();
     }

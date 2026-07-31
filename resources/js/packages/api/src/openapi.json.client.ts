@@ -3782,6 +3782,21 @@ Users with the permission &#x60;time-entries:view:own&#x60; can only use this en
                 schema: TimeEntryType.optional(),
             },
             {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
                 name: 'limit',
                 type: 'Query',
                 schema: z.number().int().gte(1).lte(500).optional(),
@@ -4192,6 +4207,21 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 schema: TimeEntryType.optional(),
             },
             {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
                 name: 'fill_gaps_in_time_groups',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
@@ -4393,6 +4423,21 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 schema: TimeEntryType.optional(),
             },
             {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
                 name: 'fill_gaps_in_time_groups',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
@@ -4524,6 +4569,21 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 name: 'type',
                 type: 'Query',
                 schema: TimeEntryType.optional(),
+            },
+            {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
             },
             {
                 name: 'limit',

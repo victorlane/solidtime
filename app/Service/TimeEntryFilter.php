@@ -283,6 +283,39 @@ class TimeEntryFilter
     }
 
     /**
+     * Filter on a single metadata key.
+     *
+     * The driving use case is "which hours have not been invoiced yet": an external system stamps
+     * f.e. `invoice_id` onto the entries it has processed, and then asks for the ones without it,
+     * instead of trusting a date range to not overlap a previous run.
+     *
+     * @param  string|null  $value  Exact value the key must have. Null means "only check presence".
+     * @param  bool  $exists  Whether the key must be present or absent.
+     */
+    public function addMetadataFilter(?string $key, ?string $value = null, bool $exists = true): self
+    {
+        if ($key === null) {
+            return $this;
+        }
+        if (! $exists) {
+            $this->builder->where(function (Builder $builder) use ($key): void {
+                $builder->whereNull('metadata')
+                    ->orWhereRaw('NOT (metadata::jsonb ?? ?)', [$key]);
+            });
+
+            return $this;
+        }
+        $this->builder->whereRaw('metadata::jsonb ?? ?', [$key]);
+        if ($value !== null) {
+            // Bound rather than built into a `metadata->key` path, so a key containing quotes or
+            // arrows cannot change the meaning of the expression.
+            $this->builder->whereRaw('metadata::jsonb ->> ? = ?', [$key, $value]);
+        }
+
+        return $this;
+    }
+
+    /**
      * @return Builder<TimeEntry>
      */
     public function get(): Builder
