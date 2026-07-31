@@ -196,6 +196,7 @@ function addProjectToFilterObject(
             updated_at: '',
             value: '',
             is_archived: false,
+            metadata: {},
             projects: [newProject],
         });
     }
@@ -213,6 +214,7 @@ function updateFilteredResults() {
             updated_at: '',
             value: '',
             is_archived: false,
+            metadata: {},
             projects: [
                 {
                     id: NO_PROJECT_ID,
@@ -228,6 +230,7 @@ function updateFilteredResults() {
                     estimated_time: null,
                     spent_time: 0,
                     is_public: false,
+                    metadata: {},
                 },
             ],
         });
@@ -694,8 +697,8 @@ const showCreateProject = ref(false);
                                 class="flex items-center space-x-2 w-full px-5 py-1.5 text-start text-xs font-semibold leading-5 text-text-primary focus:outline-none transition duration-150 ease-in-out"
                                 :class="
                                     row.task.id === highlightedItemId
-                                        ? 'bg-card-background-active'
-                                        : 'bg-quaternary'
+                                        ? 'bg-quaternary dark:bg-tertiary'
+                                        : 'bg-tertiary dark:bg-quaternary'
                                 "
                                 @click="selectTask(row.task.id)"
                                 @mouseenter="setHighlightItemId(row.task.id)">

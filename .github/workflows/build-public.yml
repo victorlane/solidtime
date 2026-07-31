@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/build-public.yml'
+      - '.dockerignore'
       - 'docker/prod/**'
   workflow_dispatch:
 
@@ -36,7 +37,7 @@ jobs:
 
     steps:
       - name: "Check out code"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Required for WyriHaximus/github-action-get-previous-tag
 
@@ -92,7 +93,7 @@ jobs:
         if: steps.cache-vendor.outputs.cache-hit != 'true' # Skip if cache hit
 
       - name: "Use Node.js"
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '20.x'
 

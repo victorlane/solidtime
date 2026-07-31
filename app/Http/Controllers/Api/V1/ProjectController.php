@@ -16,6 +16,7 @@ use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\TimeEntry;
 use App\Service\BillableRateService;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -96,6 +97,7 @@ class ProjectController extends Controller
      *
      * @operationId createProject
      */
+    #[BodyParameter('metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the project to external systems (`{"external_id": "12345"}`). Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function store(Organization $organization, ProjectStoreRequest $request): JsonResource
     {
         $this->checkPermission($organization, 'projects:create');
@@ -108,6 +110,9 @@ class ProjectController extends Controller
         $project->is_public = $request->getIsPublic();
         if ($this->canAccessPremiumFeatures($organization) && $request->has('estimated_time')) {
             $project->estimated_time = $request->getEstimatedTime();
+        }
+        if ($request->has('metadata')) {
+            $project->metadata = $request->getMetadata();
         }
         $project->organization()->associate($organization);
         $project->save();
@@ -122,6 +127,7 @@ class ProjectController extends Controller
      *
      * @operationId updateProject
      */
+    #[BodyParameter('metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the project to external systems (`{"external_id": "12345"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function update(Organization $organization, Project $project, ProjectUpdateRequest $request, BillableRateService $billableRateService): JsonResource
     {
         $this->checkPermission($organization, 'projects:update', $project);
@@ -136,6 +142,9 @@ class ProjectController extends Controller
         }
         if ($this->canAccessPremiumFeatures($organization) && $request->has('estimated_time')) {
             $project->estimated_time = $request->getEstimatedTime();
+        }
+        if ($request->has('metadata')) {
+            $project->metadata = $request->getMetadata();
         }
         $oldBillableRate = $project->billable_rate;
         $clientIdChanged = false;
