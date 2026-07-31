@@ -145,6 +145,7 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
             Route::get('/total-weekly-billable-time', [ChartController::class, 'totalWeeklyBillableTime'])->name('total-weekly-billable-time');
             Route::get('/total-weekly-billable-amount', [ChartController::class, 'totalWeeklyBillableAmount'])->name('total-weekly-billable-amount');
             Route::get('/weekly-history', [ChartController::class, 'weeklyHistory'])->name('weekly-history');
+            Route::get('/urencriterium', [ChartController::class, 'urencriterium'])->name('urencriterium');
         });
 
         // Tag routes

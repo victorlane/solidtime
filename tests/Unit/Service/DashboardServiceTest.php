@@ -31,6 +31,73 @@ class DashboardServiceTest extends TestCase
         $this->dashboardService = app(DashboardService::class);
     }
 
+    public function test_urencriterium_counts_work_time_of_the_calendar_year_and_projects_the_pace(): void
+    {
+        // Arrange - 1 July, so exactly half the (leap) year has elapsed
+        $this->travelTo(Carbon::create(2024, 7, 1, 12, 0, 0, 'Europe/Amsterdam'));
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create(['timezone' => 'Europe/Amsterdam']);
+        $member = Member::factory()->forUser($user)->forOrganization($organization)->create();
+        $clientProject = Project::factory()->forOrganization($organization)->create(['is_internal' => false]);
+        $internalProject = Project::factory()->forOrganization($organization)->create(['is_internal' => true]);
+
+        // 10h billable client work
+        TimeEntry::factory()->forMember($member)->forOrganization($organization)->forProject($clientProject)->create([
+            'start' => Carbon::create(2024, 3, 1, 8, 0, 0, 'UTC'),
+            'end' => Carbon::create(2024, 3, 1, 18, 0, 0, 'UTC'),
+            'billable' => true,
+        ]);
+        // 4h internal admin - never invoiced, but legally counts toward the criterium
+        TimeEntry::factory()->forMember($member)->forOrganization($organization)->forProject($internalProject)->create([
+            'start' => Carbon::create(2024, 3, 2, 8, 0, 0, 'UTC'),
+            'end' => Carbon::create(2024, 3, 2, 12, 0, 0, 'UTC'),
+            'billable' => false,
+        ]);
+        // A break must not count as time spent on the business
+        TimeEntry::factory()->forMember($member)->forOrganization($organization)->isBreak()->create([
+            'start' => Carbon::create(2024, 3, 2, 12, 0, 0, 'UTC'),
+            'end' => Carbon::create(2024, 3, 2, 13, 0, 0, 'UTC'),
+        ]);
+        // Last year must not leak in
+        TimeEntry::factory()->forMember($member)->forOrganization($organization)->forProject($clientProject)->create([
+            'start' => Carbon::create(2023, 12, 31, 8, 0, 0, 'UTC'),
+            'end' => Carbon::create(2023, 12, 31, 18, 0, 0, 'UTC'),
+        ]);
+
+        // Act
+        $result = $this->dashboardService->urencriterium($user, $organization);
+
+        // Assert
+        $this->assertSame(1225 * 3600, $result['required_seconds']);
+        $this->assertSame(14 * 3600, $result['tracked_seconds']);
+        $this->assertSame(10 * 3600, $result['billable_seconds']);
+        $this->assertSame(4 * 3600, $result['internal_seconds']);
+        $this->assertSame(366, $result['days_in_year']);
+        $this->assertSame(183, $result['days_elapsed']);
+        // 14h in half a year projects to 28h over the full year
+        $this->assertSame(28 * 3600, $result['projected_seconds']);
+        // (1225 - 14) hours spread over the 183 remaining days
+        $this->assertSame((int) ceil((1225 - 14) * 3600 / 183), $result['required_seconds_per_remaining_day']);
+    }
+
+    public function test_urencriterium_does_not_divide_by_zero_on_the_first_day_of_the_year(): void
+    {
+        // Arrange
+        $this->travelTo(Carbon::create(2025, 1, 1, 9, 0, 0, 'Europe/Amsterdam'));
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create(['timezone' => 'Europe/Amsterdam']);
+        Member::factory()->forUser($user)->forOrganization($organization)->create();
+
+        // Act
+        $result = $this->dashboardService->urencriterium($user, $organization);
+
+        // Assert
+        $this->assertSame(1, $result['days_elapsed']);
+        $this->assertSame(365, $result['days_in_year']);
+        $this->assertSame(0, $result['tracked_seconds']);
+        $this->assertSame(0, $result['projected_seconds']);
+    }
+
     public function test_daily_tracked_hours_returns_correct_values(): void
     {
         // Arrange

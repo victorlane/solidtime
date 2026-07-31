@@ -1272,6 +1272,48 @@ const endpoints = makeApi([
     },
     {
         method: 'get',
+        path: '/v1/organizations/:organization/charts/urencriterium',
+        alias: 'urencriterium',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z
+            .object({
+                required_seconds: z.number().int(),
+                tracked_seconds: z.number().int(),
+                billable_seconds: z.number().int(),
+                internal_seconds: z.number().int(),
+                days_elapsed: z.number().int(),
+                days_in_year: z.number().int(),
+                projected_seconds: z.number().int(),
+                required_seconds_per_remaining_day: z.number().int(),
+            })
+            .passthrough(),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
         path: '/v1/organizations/:organization/charts/weekly-project-overview',
         alias: 'weeklyProjectOverview',
         requestFormat: 'json',
