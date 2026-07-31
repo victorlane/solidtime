@@ -50,7 +50,7 @@ async function goToTimeOverview(page: Page) {
 async function goToOrganizationSettings(page: Page) {
     await page.goto(PLAYWRIGHT_BASE_URL + '/dashboard');
     await page.locator('[data-testid="organization_switcher"]:visible').click();
-    await page.getByText('Organization Settings').click();
+    await page.getByRole('menuitem', { name: 'Organization Settings' }).click();
 }
 
 async function createEmptyTimeEntry(page: Page) {
@@ -2302,4 +2302,22 @@ test('test that aggregate row context menu delete removes all grouped entries', 
     await expect(
         page.locator('[data-testid="time_entry_row"]').filter({ hasText: description })
     ).not.toBeVisible();
+});
+
+test('test that break entries show a break badge and split day total on the time page', async ({
+    page,
+    ctx,
+}) => {
+    await updateOrganizationSettingViaApi(ctx, { breaks_enabled: true });
+    await createTimeEntryViaApi(ctx, { duration: '2h', description: 'Some work' });
+    await createTimeEntryViaApi(ctx, { duration: '30min', type: 'break', description: '' });
+
+    await page.goto(PLAYWRIGHT_BASE_URL + '/time');
+    await expect(page.getByTestId('break_badge').first()).toBeVisible();
+    await expect(page.getByTestId('break_badge').first()).toContainText('Break');
+    // Day heading shows worked time first, then the break portion
+    await expect(page.getByTestId('day_break_duration').first()).toBeVisible();
+    await expect(page.getByTestId('day_break_duration').first().locator('..')).toContainText(
+        '2h 00min work · 0h 30min break'
+    );
 });

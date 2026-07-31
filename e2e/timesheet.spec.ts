@@ -2,7 +2,15 @@ import { PLAYWRIGHT_BASE_URL } from '../playwright/config';
 import { test } from '../playwright/fixtures';
 import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { createProjectViaApi, createTaskViaApi, createTimeEntryOnDateViaApi } from './utils/api';
+import {
+    createProjectViaApi,
+    createTaskViaApi,
+    createTimeEntryOnDateViaApi,
+    createTimeEntryWithTimestampsViaApi,
+    getTimeEntriesViaApi,
+    updateOrganizationSettingViaApi,
+    type TestContext,
+} from './utils/api';
 
 // ──────────────────────────────────────────────────
 // Helpers
@@ -56,6 +64,34 @@ async function waitForTimesheetLoad(page: Page) {
 
 function addRowButton(page: Page) {
     return page.getByRole('button', { name: /Add row/i }).first();
+}
+
+async function fillBreakCell(page: Page, hours: string, dayIndex = 0) {
+    const input = page
+        .locator('[data-testid="timesheet_row"]')
+        .filter({ has: page.getByText('Break', { exact: true }) })
+        .locator('[data-testid="timesheet_cell"]')
+        .nth(dayIndex)
+        .locator('input');
+    await input.click();
+    await input.fill(hours);
+    return input;
+}
+
+function waitForBreakCreated(page: Page) {
+    return page.waitForResponse(
+        async (resp) =>
+            resp.url().includes('/time-entries') &&
+            resp.request().method() === 'POST' &&
+            resp.status() === 201 &&
+            (await resp.json()).data.type === 'break'
+    );
+}
+
+async function getDayEntriesViaApi(ctx: TestContext, day: string) {
+    return (await getTimeEntriesViaApi(ctx))
+        .filter((e) => e.start.startsWith(day))
+        .sort((a, b) => a.start.localeCompare(b.start));
 }
 
 async function chooseRowIdentity(page: Page, optionName: string) {
@@ -638,4 +674,253 @@ test('cell accepts various duration input formats', async ({ page, ctx }) => {
 
     // 1.5 hours = 1h 30min
     await expect(mondayInput).toHaveValue('1h 30min');
+});
+
+test('test that adding a timesheet break to a full day splits the work entry via the placement modal', async ({
+    page,
+    ctx,
+}) => {
+    // A single work entry filling the day leaves no gap for a break, so the placement
+    // modal must offer to split it (the only entry) and drop the break in the middle.
+    await updateOrganizationSettingViaApi(ctx, { breaks_enabled: true });
+    const day = getCurrentWeekMonday().toISOString().slice(0, 10);
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T09:00:00Z`,
+        end: `${day}T17:00:00Z`,
+        description: 'Split me',
+    });
+
+    await goToTimesheet(page);
+    await expect(page.getByTestId('timesheet_view')).toBeVisible();
+
+    // The break row is always present — enter a 30m break on Monday
+    const breakCell = await fillBreakCell(page, '0.5');
+    await breakCell.press('Enter');
+
+    // The placement modal opens with the split preview, naming the entry that
+    // will be split so the user can recognize it.
+    await expect(page.getByTestId('break_placement_summary')).toBeVisible();
+    await expect(page.getByTestId('break_placement_summary')).toContainText(
+        'No Project · Split me'
+    );
+    await Promise.all([
+        waitForBreakCreated(page),
+        page.getByRole('button', { name: 'Add break' }).click(),
+    ]);
+
+    // The break is inserted without reducing the eight hours of work.
+    const dayEntries = await getDayEntriesViaApi(ctx, day);
+    expect(dayEntries.map((e) => [e.type, e.start, e.end])).toEqual([
+        ['work', `${day}T09:00:00Z`, `${day}T13:00:00Z`],
+        ['break', `${day}T13:00:00Z`, `${day}T13:30:00Z`],
+        ['work', `${day}T13:30:00Z`, `${day}T17:30:00Z`],
+    ]);
+});
+
+test('test that adding a break into an oversized gap places it without moving other entries', async ({
+    page,
+    ctx,
+}) => {
+    // 09-12 and 15-17 leave a 3h gap — wider than the placement tolerance allows,
+    // but easily big enough to hold the break. Such a gap is deliberate (the app
+    // itself never creates one), so the break goes flush after the morning entry
+    // and nothing else moves — no placement modal.
+    await updateOrganizationSettingViaApi(ctx, { breaks_enabled: true });
+    const day = getCurrentWeekMonday().toISOString().slice(0, 10);
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T09:00:00Z`,
+        end: `${day}T12:00:00Z`,
+        description: 'Morning',
+    });
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T15:00:00Z`,
+        end: `${day}T17:00:00Z`,
+        description: 'Afternoon',
+    });
+
+    await goToTimesheet(page);
+    await expect(page.getByTestId('timesheet_view')).toBeVisible();
+
+    const breakCell = await fillBreakCell(page, '0.5');
+    await Promise.all([waitForBreakCreated(page), breakCell.press('Enter')]);
+
+    await expect(page.getByTestId('break_placement_summary')).not.toBeVisible();
+    const dayEntries = await getDayEntriesViaApi(ctx, day);
+    expect(dayEntries.map((e) => [e.type, e.start, e.end])).toEqual([
+        ['work', `${day}T09:00:00Z`, `${day}T12:00:00Z`],
+        ['break', `${day}T12:00:00Z`, `${day}T12:30:00Z`],
+        ['work', `${day}T15:00:00Z`, `${day}T17:00:00Z`],
+    ]);
+});
+
+test('test that the placement modal warns when the chosen time would leave the break misaligned', async ({
+    page,
+    ctx,
+}) => {
+    // Back-to-back 09-12 and 12-17 leave no gap, so the placement modal opens.
+    // The suggested slot (flush at 12:00) is aligned — no warning. Moving the
+    // break to 07:00, before any work, keeps the plan feasible but the result
+    // would immediately carry the misaligned hint, so the modal warns upfront.
+    await updateOrganizationSettingViaApi(ctx, { breaks_enabled: true });
+    const day = getCurrentWeekMonday().toISOString().slice(0, 10);
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T09:00:00Z`,
+        end: `${day}T12:00:00Z`,
+        description: 'Morning',
+    });
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T12:00:00Z`,
+        end: `${day}T17:00:00Z`,
+        description: 'Afternoon',
+    });
+
+    await goToTimesheet(page);
+    await expect(page.getByTestId('timesheet_view')).toBeVisible();
+
+    const breakCell = await fillBreakCell(page, '0.5');
+    await breakCell.press('Enter');
+
+    // Default suggestion sits flush between work → no warning
+    await expect(page.getByTestId('break_placement_summary')).toBeVisible();
+    await expect(page.getByTestId('break_placement_misaligned_warning')).not.toBeVisible();
+
+    // Move the break to 07:00-07:30, before all work
+    const modal = page.getByRole('dialog');
+    const startTimeInput = modal.getByTestId('time_picker_input').first();
+    await startTimeInput.fill('07:00');
+    await startTimeInput.press('Tab');
+    const endTimeInput = modal.getByTestId('time_picker_input').nth(1);
+    await endTimeInput.fill('07:30');
+    await endTimeInput.press('Tab');
+
+    // Feasible (nothing has to move), but flagged as misaligned beforehand
+    await expect(page.getByTestId('break_placement_misaligned_warning')).toBeVisible();
+    await expect(page.getByTestId('break_placement_summary')).toContainText(
+        'No entries need to move.'
+    );
+
+    // The warning is non-blocking: the break can still be added as chosen
+    await Promise.all([
+        waitForBreakCreated(page),
+        page.getByRole('button', { name: 'Add break' }).click(),
+    ]);
+
+    const dayEntries = await getDayEntriesViaApi(ctx, day);
+    expect(dayEntries.map((e) => [e.type, e.start, e.end])).toEqual([
+        ['break', `${day}T07:00:00Z`, `${day}T07:30:00Z`],
+        ['work', `${day}T09:00:00Z`, `${day}T12:00:00Z`],
+        ['work', `${day}T12:00:00Z`, `${day}T17:00:00Z`],
+    ]);
+    // ...and the timesheet now shows the misaligned-break hint for that day
+    const hint = page.getByRole('button', {
+        name: 'does not align with your work entries',
+    });
+    await expect(hint).toBeVisible();
+
+    // The resulting warning links to the calendar on the affected date.
+    await hint.click();
+    await expect(page.getByRole('link', { name: 'Fix in calendar' })).toHaveAttribute(
+        'href',
+        `/calendar?date=${day}`
+    );
+});
+
+test('test that editing a timesheet break re-places it as one entry instead of fragmenting it', async ({
+    page,
+    ctx,
+}) => {
+    // Two work entries with a 1h gap, and a 30m break created directly inside it (12:15–12:45).
+    await updateOrganizationSettingViaApi(ctx, { breaks_enabled: true });
+    const day = getCurrentWeekMonday().toISOString().slice(0, 10);
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T09:00:00Z`,
+        end: `${day}T12:00:00Z`,
+        description: 'Work',
+    });
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T13:00:00Z`,
+        end: `${day}T17:00:00Z`,
+        description: 'Work',
+    });
+    const breakEntry = await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T12:15:00Z`,
+        end: `${day}T12:45:00Z`,
+        type: 'break',
+    });
+
+    await goToTimesheet(page);
+    await expect(page.getByTestId('timesheet_view')).toBeVisible();
+    const breakCell = await fillBreakCell(page, '0.75');
+    await Promise.all([
+        // A break that still fits its gap is re-placed in place (PUT on the same entry),
+        // not deleted and recreated — that's what keeps it a single entry.
+        page.waitForResponse(
+            async (resp) =>
+                resp.url().includes(`/time-entries/${breakEntry.id}`) &&
+                resp.request().method() === 'PUT' &&
+                resp.status() === 200 &&
+                (await resp.json()).data.type === 'break'
+        ),
+        breakCell.press('Enter'),
+    ]);
+
+    // Still exactly one break on the day (not fragmented). It stays anchored at its current
+    // start (12:15) rather than re-centering, growing its end to 13:00 to reach 45 minutes.
+    const breaks = (await getDayEntriesViaApi(ctx, day)).filter((e) => e.type === 'break');
+    expect(breaks).toHaveLength(1);
+    expect(breaks[0].duration).toBe(2700);
+    expect(breaks[0].start).toBe(`${day}T12:15:00Z`);
+    expect(breaks[0].end).toBe(`${day}T13:00:00Z`);
+});
+
+test('test that editing an adjacent break vacates its old slot before extending work', async ({
+    page,
+    ctx,
+}) => {
+    // The existing break must move before work can extend through its old slot.
+    await updateOrganizationSettingViaApi(ctx, {
+        breaks_enabled: true,
+        prevent_overlapping_time_entries: true,
+    });
+    const day = getCurrentWeekMonday().toISOString().slice(0, 10);
+    await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T09:00:00Z`,
+        end: `${day}T17:00:00Z`,
+        description: 'Work before break',
+    });
+    const breakEntry = await createTimeEntryWithTimestampsViaApi(ctx, {
+        start: `${day}T17:00:00Z`,
+        end: `${day}T17:30:00Z`,
+        type: 'break',
+    });
+
+    await goToTimesheet(page);
+    await expect(page.getByTestId('timesheet_view')).toBeVisible();
+    const breakCell = await fillBreakCell(page, '1');
+    await breakCell.press('Enter');
+
+    await expect(page.getByTestId('break_placement_summary')).toBeVisible();
+    await Promise.all([
+        page.waitForResponse(
+            (resp) =>
+                resp.url().includes(`/time-entries/${breakEntry.id}`) &&
+                resp.request().method() === 'PUT' &&
+                resp.status() === 200
+        ),
+        page.waitForResponse(
+            async (resp) =>
+                resp.url().includes('/time-entries') &&
+                resp.request().method() === 'POST' &&
+                resp.status() === 201 &&
+                (await resp.json()).data.type === 'work'
+        ),
+        page.getByRole('button', { name: 'Add break' }).click(),
+    ]);
+
+    const entries = await getDayEntriesViaApi(ctx, day);
+    expect(entries.map((entry) => [entry.id, entry.type, entry.start, entry.end])).toEqual([
+        [expect.any(String), 'work', `${day}T09:00:00Z`, `${day}T13:00:00Z`],
+        [breakEntry.id, 'break', `${day}T13:00:00Z`, `${day}T14:00:00Z`],
+        [expect.any(String), 'work', `${day}T14:00:00Z`, `${day}T18:00:00Z`],
+    ]);
 });
