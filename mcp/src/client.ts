@@ -7,9 +7,7 @@ export class SolidtimeApiError extends Error {
         readonly path: string,
         readonly body: unknown
     ) {
-        super(
-            `solidtime API ${method} ${path} failed with ${status}: ${formatErrorBody(body)}`
-        );
+        super(`solidtime API ${method} ${path} failed with ${status}: ${formatErrorBody(body)}`);
         this.name = 'SolidtimeApiError';
     }
 }
@@ -32,9 +30,7 @@ function formatErrorBody(body: unknown): string {
             for (const [field, messages] of Object.entries(
                 record.errors as Record<string, unknown>
             )) {
-                const text = Array.isArray(messages)
-                    ? messages.join(', ')
-                    : String(messages);
+                const text = Array.isArray(messages) ? messages.join(', ') : String(messages);
                 parts.push(`${field}: ${text}`);
             }
         }
@@ -45,10 +41,7 @@ function formatErrorBody(body: unknown): string {
     return JSON.stringify(body);
 }
 
-type Query = Record<
-    string,
-    string | number | boolean | string[] | undefined | null
->;
+type Query = Record<string, string | number | boolean | string[] | undefined | null>;
 
 function buildQuery(query: Query | undefined): string {
     if (!query) {
@@ -89,14 +82,9 @@ async function request<T>(
             headers: {
                 Authorization: `Bearer ${config.apiToken}`,
                 Accept: 'application/json',
-                ...(options.body !== undefined
-                    ? { 'Content-Type': 'application/json' }
-                    : {}),
+                ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
             },
-            body:
-                options.body !== undefined
-                    ? JSON.stringify(options.body)
-                    : undefined,
+            body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
             signal: controller.signal,
         });
     } catch (error) {
@@ -132,13 +120,9 @@ async function request<T>(
 }
 
 export const api = {
-    get: <T>(path: string, query?: Query) =>
-        request<T>('GET', path, { query }),
-    post: <T>(path: string, body?: unknown) =>
-        request<T>('POST', path, { body }),
+    get: <T>(path: string, query?: Query) => request<T>('GET', path, { query }),
+    post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body }),
     put: <T>(path: string, body?: unknown) => request<T>('PUT', path, { body }),
-    patch: <T>(path: string, body?: unknown) =>
-        request<T>('PATCH', path, { body }),
-    delete: <T>(path: string, query?: Query) =>
-        request<T>('DELETE', path, { query }),
+    patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, { body }),
+    delete: <T>(path: string, query?: Query) => request<T>('DELETE', path, { query }),
 };

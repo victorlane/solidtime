@@ -3,11 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerTimeEntryTools } from './tools/time-entries.js';
 import { registerProjectTools } from './tools/projects.js';
-import {
-    registerClientTools,
-    registerTagTools,
-    registerTaskTools,
-} from './tools/taxonomy.js';
+import { registerClientTools, registerTagTools, registerTaskTools } from './tools/taxonomy.js';
 import {
     registerMemberTools,
     registerOrganizationTools,

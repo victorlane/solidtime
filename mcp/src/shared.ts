@@ -55,9 +55,7 @@ export function resolveOrganizationId(provided?: string): string {
 }
 
 /** Drop undefined keys so a PATCH-style update never nulls a field by accident. */
-export function compact<T extends Record<string, unknown>>(
-    input: T
-): Partial<T> {
+export function compact<T extends Record<string, unknown>>(input: T): Partial<T> {
     return Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
     ) as Partial<T>;

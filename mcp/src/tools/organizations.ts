@@ -27,8 +27,7 @@ export function registerOrganizationTools(server: McpServer): void {
     registerTool(server, {
         name: 'get_my_user',
         title: 'Get current user',
-        description:
-            'Return the authenticated user, including their current organization.',
+        description: 'Return the authenticated user, including their current organization.',
         readOnly: true,
         schema: {},
         handler: async () => json(await api.get('/v1/users/me')),
@@ -55,8 +54,7 @@ export function registerOrganizationTools(server: McpServer): void {
         schema: {
             name: z.string().min(1).max(255),
         },
-        handler: async ({ name }) =>
-            json(await api.post('/v1/organizations', { name })),
+        handler: async ({ name }) => json(await api.post('/v1/organizations', { name })),
     });
 
     registerTool(server, {
@@ -117,9 +115,7 @@ export function registerOrganizationTools(server: McpServer): void {
         },
         handler: async ({ organization_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.put(`/v1/organizations/${orgId}`, compact(body))
-            );
+            return json(await api.put(`/v1/organizations/${orgId}`, compact(body)));
         },
     });
 
@@ -150,20 +146,14 @@ export function registerMemberTools(server: McpServer): void {
         },
         handler: async ({ organization_id, page }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/members`,
-                    compact({ page })
-                )
-            );
+            return json(await api.get(`/v1/organizations/${orgId}/members`, compact({ page })));
         },
     });
 
     registerTool(server, {
         name: 'update_member',
         title: 'Update member',
-        description:
-            "Change a member's role or their organization-level billable rate override.",
+        description: "Change a member's role or their organization-level billable rate override.",
         schema: {
             organization_id: organizationIdSchema,
             member_id: uuid,
@@ -173,10 +163,7 @@ export function registerMemberTools(server: McpServer): void {
         handler: async ({ organization_id, member_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.put(
-                    `/v1/organizations/${orgId}/members/${member_id}`,
-                    compact(body)
-                )
+                await api.put(`/v1/organizations/${orgId}/members/${member_id}`, compact(body))
             );
         },
     });
@@ -193,11 +180,7 @@ export function registerMemberTools(server: McpServer): void {
         },
         handler: async ({ organization_id, member_id }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/members/${member_id}`
-                )
-            );
+            return json(await api.delete(`/v1/organizations/${orgId}/members/${member_id}`));
         },
     });
 
@@ -213,9 +196,7 @@ export function registerMemberTools(server: McpServer): void {
         handler: async ({ organization_id, member_id }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.post(
-                    `/v1/organizations/${orgId}/members/${member_id}/make-placeholder`
-                )
+                await api.post(`/v1/organizations/${orgId}/members/${member_id}/make-placeholder`)
             );
         },
     });
@@ -232,9 +213,7 @@ export function registerMemberTools(server: McpServer): void {
         handler: async ({ organization_id, member_id }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.post(
-                    `/v1/organizations/${orgId}/members/${member_id}/invite-placeholder`
-                )
+                await api.post(`/v1/organizations/${orgId}/members/${member_id}/invite-placeholder`)
             );
         },
     });
@@ -252,17 +231,12 @@ export function registerMemberTools(server: McpServer): void {
                 'Member to merge INTO — this one keeps everything.'
             ),
         },
-        handler: async ({
-            organization_id,
-            member_id,
-            member_id_to_merge_into,
-        }) => {
+        handler: async ({ organization_id, member_id, member_id_to_merge_into }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.post(
-                    `/v1/organizations/${orgId}/member/${member_id}/merge-into`,
-                    { member_id: member_id_to_merge_into }
-                )
+                await api.post(`/v1/organizations/${orgId}/member/${member_id}/merge-into`, {
+                    member_id: member_id_to_merge_into,
+                })
             );
         },
     });
@@ -278,12 +252,7 @@ export function registerMemberTools(server: McpServer): void {
         },
         handler: async ({ organization_id, page }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/invitations`,
-                    compact({ page })
-                )
-            );
+            return json(await api.get(`/v1/organizations/${orgId}/invitations`, compact({ page })));
         },
     });
 
@@ -320,9 +289,7 @@ export function registerMemberTools(server: McpServer): void {
         handler: async ({ organization_id, invitation_id }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/invitations/${invitation_id}`
-                )
+                await api.delete(`/v1/organizations/${orgId}/invitations/${invitation_id}`)
             );
         },
     });
@@ -332,8 +299,7 @@ export function registerReferenceTools(server: McpServer): void {
     registerTool(server, {
         name: 'list_currencies',
         title: 'List currencies',
-        description:
-            'List supported ISO 4217 currency codes for update_organization.',
+        description: 'List supported ISO 4217 currency codes for update_organization.',
         readOnly: true,
         schema: {},
         handler: async () => json(await api.get('/v1/currencies')),
