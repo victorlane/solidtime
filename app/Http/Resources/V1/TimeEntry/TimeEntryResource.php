@@ -16,7 +16,7 @@ class TimeEntryResource extends BaseResource
     /**
      * Transform the resource into an array.
      *
-     * @return array<string, string|bool|int|null|array<string>>
+     * @return array<string, string|bool|int|null|array<string>|array<string, string>>
      */
     public function toArray(Request $request): array
     {
@@ -49,6 +49,8 @@ class TimeEntryResource extends BaseResource
             'billable' => $this->resource->billable,
             /** @var string $type Type of the time entry (`work` time or a `break`) */
             'type' => $this->resource->type->value,
+            /** @var array<string, string> $metadata Custom metadata as key-value pairs, f.e. for linking the time entry to external systems */
+            'metadata' => $this->resource->metadata ?? [],
         ];
     }
 }

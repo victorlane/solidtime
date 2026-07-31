@@ -30,6 +30,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Service\LocalizationService;
+use App\Service\ReportExport\MetadataColumns;
 use App\Service\ReportExport\TimeEntriesDetailedCsvExport;
 use App\Service\ReportExport\TimeEntriesDetailedExport;
 use App\Service\ReportExport\TimeEntriesReportExport;
@@ -37,6 +38,7 @@ use App\Service\TimeEntryAggregationService;
 use App\Service\TimeEntryFilter;
 use App\Service\TimeEntryService;
 use App\Service\TimezoneService;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Gotenberg\Exceptions\GotenbergApiErrored;
 use Gotenberg\Exceptions\NoOutputFileInResponse;
 use Gotenberg\Gotenberg;
@@ -256,8 +258,12 @@ class TimeEntryController extends Controller
         $folderPath = 'exports';
         $path = $folderPath.'/'.$filename;
         $localizationService = LocalizationService::forOrganization($organization);
+        // The metadata keys differ per time entry, so the columns are only known after looking at the whole result set
+        $metadataKeys = $request->getIncludeMetadata() && $format !== ExportFormat::PDF
+            ? MetadataColumns::collectKeys($timeEntriesQuery)
+            : [];
         if ($format === ExportFormat::CSV) {
-            $export = new TimeEntriesDetailedCsvExport(config('filesystems.private'), $folderPath, $filename, $timeEntriesQuery, 1000, $timezone);
+            $export = new TimeEntriesDetailedCsvExport(config('filesystems.private'), $folderPath, $filename, $timeEntriesQuery, 1000, $timezone, $metadataKeys);
             $export->export();
         } elseif ($format === ExportFormat::PDF) {
             if (config('services.gotenberg.url') === null && ! $debug) {
@@ -324,7 +330,7 @@ class TimeEntryController extends Controller
                 ->putFileAs($folderPath, new File($tempFolder->path($filenameTemp)), $filename);
         } else {
             Excel::store(
-                new TimeEntriesDetailedExport($timeEntriesQuery, $format, $timezone, $localizationService),
+                new TimeEntriesDetailedExport($timeEntriesQuery, $format, $timezone, $localizationService, $metadataKeys),
                 $path,
                 config('filesystems.private'),
                 $format->getExportPackageType(),
@@ -583,6 +589,7 @@ class TimeEntryController extends Controller
      *
      * @operationId createTimeEntry
      */
+    #[BodyParameter('metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the time entry to external systems (`{"external_id": "12345"}`). Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function store(Organization $organization, TimeEntryStoreRequest $request): JsonResource
     {
         /** @var Member $member */
@@ -632,6 +639,7 @@ class TimeEntryController extends Controller
      *
      * @operationId updateTimeEntry
      */
+    #[BodyParameter('metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the time entry to external systems (`{"external_id": "12345"}`). Replaces all existing metadata; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function update(Organization $organization, TimeEntry $timeEntry, TimeEntryUpdateRequest $request): JsonResource
     {
         $member = $this->member($organization);
@@ -700,6 +708,7 @@ class TimeEntryController extends Controller
      *
      * @throws AuthorizationException
      */
+    #[BodyParameter('changes.metadata', description: 'Custom metadata as key-value string pairs, f.e. for linking the time entries to external systems (`{"external_id": "12345"}`). Replaces all existing metadata on every listed entry; send `null` to clear it, omit the field to keep it unchanged. Max. 50 keys, values max. 500 characters.', type: 'array<string, string>|null', example: ['external_id' => '12345'])]
     public function updateMultiple(Organization $organization, TimeEntryUpdateMultipleRequest $request): JsonResponse
     {
         $member = $this->member($organization);

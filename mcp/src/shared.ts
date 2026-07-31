@@ -32,6 +32,18 @@ export const billableRateSchema = z
         'Billable rate in CENTS of the organization currency (e.g. 8500 = 85.00 per hour). Null clears the override so the rate is inherited.'
     );
 
+/**
+ * Free-form key-value pairs for linking a record to an external system.
+ * Replaces the whole object on write, so always send every key you want to keep.
+ */
+export const metadataSchema = z
+    .record(z.string().max(500))
+    .nullable()
+    .optional()
+    .describe(
+        'Custom metadata as key-value string pairs, f.e. {"external_id": "12345"}. Replaces all existing metadata, so send the full object; null clears it and omitting it keeps it unchanged. Max. 50 keys, values max. 500 characters.'
+    );
+
 export function resolveOrganizationId(provided?: string): string {
     const id = provided ?? config.defaultOrganizationId;
     if (!id) {

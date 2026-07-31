@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { api } from '../client.js';
 import {
     compact,
+    metadataSchema,
     organizationIdSchema,
     resolveOrganizationId,
     toBooleanFilter,
@@ -199,6 +200,7 @@ export function registerTimeEntryTools(server: McpServer): void {
                 .array(uuid)
                 .optional()
                 .describe('Tag UUIDs to attach.'),
+            metadata: metadataSchema,
         },
         handler: async ({ organization_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
@@ -233,6 +235,7 @@ export function registerTimeEntryTools(server: McpServer): void {
                 .array(uuid)
                 .optional()
                 .describe('Replaces the full tag list.'),
+            metadata: metadataSchema,
         },
         handler: async ({ organization_id, time_entry_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
@@ -261,6 +264,7 @@ export function registerTimeEntryTools(server: McpServer): void {
                     billable: z.boolean().optional(),
                     description: z.string().max(5000).nullable().optional(),
                     tags: z.array(uuid).nullable().optional(),
+                    metadata: metadataSchema,
                 })
                 .describe('Fields to apply to every listed entry.'),
         },

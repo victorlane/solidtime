@@ -20,6 +20,7 @@ function timeEntry(id: string, start: string, type: 'work' | 'break'): TimeEntry
         tags: [],
         billable: false,
         type,
+        metadata: {},
     } as TimeEntry;
 }
 

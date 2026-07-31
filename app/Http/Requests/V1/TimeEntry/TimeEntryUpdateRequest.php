@@ -42,7 +42,7 @@ class TimeEntryUpdateRequest extends BaseFormRequest
             : $timeEntry?->type;
         $isBreak = $resultingType === TimeEntryType::Break;
 
-        return [
+        return array_merge([
             // ID of the organization member that the time entry should belong to
             'member_id' => [
                 'string',
@@ -135,6 +135,6 @@ class TimeEntryUpdateRequest extends BaseFormRequest
                     return $builder->whereBelongsTo($this->organization, 'organization');
                 })->uuid(),
             ],
-        ];
+        ], $this->metadataRules());
     }
 }

@@ -34,11 +34,29 @@ class TimeEntriesDetailedCsvExport extends CsvExport
 
     private string $timezone;
 
-    public function __construct(string $disk, string $folderPath, string $filename, Builder $builder, int $chunk, string $timezone)
+    /**
+     * @var list<string>
+     */
+    private array $metadataKeys;
+
+    /**
+     * @param  Builder<TimeEntry>  $builder
+     * @param  list<string>  $metadataKeys  Metadata keys that get one column each, appended after the fixed columns.
+     */
+    public function __construct(string $disk, string $folderPath, string $filename, Builder $builder, int $chunk, string $timezone, array $metadataKeys = [])
     {
         parent::__construct($disk, $folderPath, $filename, $builder, $chunk);
 
         $this->timezone = $timezone;
+        $this->metadataKeys = $metadataKeys;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function header(): array
+    {
+        return array_merge(static::HEADER, MetadataColumns::headings($this->metadataKeys));
     }
 
     /**
@@ -49,7 +67,7 @@ class TimeEntriesDetailedCsvExport extends CsvExport
         $interval = app(IntervalService::class);
         $duration = $model->getDuration();
 
-        return [
+        return array_merge([
             'Description' => $model->description,
             'Task' => $model->task?->name,
             'Project' => $model->project?->name,
@@ -62,6 +80,6 @@ class TimeEntriesDetailedCsvExport extends CsvExport
             'Billable' => $model->billable ? 'Yes' : 'No',
             'Break' => $model->type === TimeEntryType::Break ? 'Yes' : 'No',
             'Tags' => $model->tagsRelation->pluck('name')->implode(', '),
-        ];
+        ], MetadataColumns::row($model, $this->metadataKeys));
     }
 }

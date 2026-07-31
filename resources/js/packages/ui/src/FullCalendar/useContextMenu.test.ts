@@ -18,6 +18,7 @@ function breakEntry(): TimeEntry {
         tags: [],
         billable: false,
         type: 'break',
+        metadata: {},
     } as TimeEntry;
 }
 

@@ -31,6 +31,7 @@ use Staudenmeir\EloquentJsonRelations\Relations\BelongsToJson;
  * @property bool $billable
  * @property TimeEntryType $type
  * @property array<string> $tags
+ * @property array<string, string>|null $metadata
  * @property string $user_id
  * @property string $member_id
  * @property bool $is_imported
@@ -75,6 +76,7 @@ class TimeEntry extends Model implements AuditableContract
         'billable' => 'bool',
         'type' => TimeEntryType::class,
         'tags' => 'array',
+        'metadata' => 'array',
         'billable_rate' => 'int',
         'is_imported' => 'bool',
         'still_active_email_sent_at' => 'datetime',
@@ -100,6 +102,7 @@ class TimeEntry extends Model implements AuditableContract
         'project_id',
         'task_id',
         'tags',
+        'metadata',
         'created_at',
         'updated_at',
         'member_id',

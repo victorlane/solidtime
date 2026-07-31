@@ -12,8 +12,10 @@ import {
 import Pagination from '@/Components/Common/Pagination.vue';
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/packages/ui/src';
 import { SecondaryButton } from '@/packages/ui/src';
@@ -166,6 +168,10 @@ const showExportModal = ref(false);
 const exportUrl = ref<string | null>(null);
 const showPremiumModal = ref(false);
 const exportLoading = ref(false);
+const includeMetadataInExport = useSessionStorage<boolean>(
+    'reporting-export-include-metadata',
+    false
+);
 
 function triggerExport(format: ExportFormat) {
     if (format === 'pdf' && !isAllowedToPerformPremiumAction()) {
@@ -235,6 +241,9 @@ async function downloadExport(format: ExportFormat) {
                     queries: {
                         ...getFilterAttributes(),
                         format: format,
+                        // The PDF report has a fixed layout, so metadata columns only apply to the tabular formats
+                        include_metadata:
+                            includeMetadataInExport.value && format !== 'pdf' ? 'true' : 'false',
                     },
                 }),
             'Export successful',
@@ -287,6 +296,12 @@ async function downloadExport(format: ExportFormat) {
                         <DropdownMenuItem @click="triggerExport('ods')">
                             Export as ODS
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                            :model-value="includeMetadataInExport"
+                            @select.prevent="includeMetadataInExport = !includeMetadataInExport">
+                            Include metadata columns
+                        </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -316,6 +331,12 @@ async function downloadExport(format: ExportFormat) {
                     <DropdownMenuItem @click="triggerExport('ods')">
                         Export as ODS
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                        :model-value="includeMetadataInExport"
+                        @select.prevent="includeMetadataInExport = !includeMetadataInExport">
+                        Include metadata columns
+                    </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         </MainContainer>
