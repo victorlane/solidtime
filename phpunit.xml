@@ -29,6 +29,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_ENABLE_REGISTRATION" value="true"/>
         <env name="APP_FORCE_HTTPS" value="false"/>
         <env name="TRUSTED_PROXIES" value="0.0.0.0/0,2000:0:0:0:0:0:0:0/3"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

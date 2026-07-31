@@ -79,6 +79,7 @@ These trip up agents (and humans), so they are repeated in every relevant tool d
 - **Timestamps are UTC in exactly `YYYY-MM-DDTHH:MM:SSZ`.** The API rejects offsets and fractional seconds.
 - **Estimated times are in seconds.**
 - **A time entry with no `end` is a running timer.** Stop it by setting `end` via `update_time_entry`.
+- **`metadata` is a full replacement, not a merge.** Send every key you want to keep, `null` to clear, omit to leave unchanged.
 - `update_project`, `update_task` and `update_client` are full replacements — the API requires `name` (and for projects `color`/`is_billable`) on every call. Read the current record first.
 
 ## Notes

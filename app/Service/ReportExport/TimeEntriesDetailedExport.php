@@ -41,14 +41,21 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
     private LocalizationService $localizationService;
 
     /**
-     * @param  Builder<TimeEntry>  $builder
+     * @var list<string>
      */
-    public function __construct(Builder $builder, ExportFormat $exportFormat, string $timezone, LocalizationService $localizationService)
+    private array $metadataKeys;
+
+    /**
+     * @param  Builder<TimeEntry>  $builder
+     * @param  list<string>  $metadataKeys  Metadata keys that get one column each, appended after the fixed columns.
+     */
+    public function __construct(Builder $builder, ExportFormat $exportFormat, string $timezone, LocalizationService $localizationService, array $metadataKeys = [])
     {
         $this->builder = $builder;
         $this->exportFormat = $exportFormat;
         $this->timezone = $timezone;
         $this->localizationService = $localizationService;
+        $this->metadataKeys = $metadataKeys;
     }
 
     /**
@@ -96,7 +103,7 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
      */
     public function headings(): array
     {
-        return [
+        return array_merge([
             'Description',
             'Task',
             'Project',
@@ -109,7 +116,7 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
             'Billable',
             'Break',
             'Tags',
-        ];
+        ], MetadataColumns::headings($this->metadataKeys));
     }
 
     /**
@@ -121,7 +128,7 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
         $duration = $model->getDuration();
 
         if ($this->exportFormat === ExportFormat::XLSX) {
-            return [
+            return array_merge([
                 $model->description,
                 $model->task?->name,
                 $model->project?->name,
@@ -134,9 +141,9 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
                 $model->billable ? 'Yes' : 'No',
                 $model->type === TimeEntryType::Break ? 'Yes' : 'No',
                 $model->tagsRelation->pluck('name')->implode(', '),
-            ];
+            ], MetadataColumns::values($model, $this->metadataKeys));
         } elseif ($this->exportFormat === ExportFormat::ODS) {
-            return [
+            return array_merge([
                 $model->description,
                 $model->task?->name,
                 $model->project?->name,
@@ -149,7 +156,7 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
                 $model->billable ? 'Yes' : 'No',
                 $model->type === TimeEntryType::Break ? 'Yes' : 'No',
                 $model->tagsRelation->pluck('name')->implode(', '),
-            ];
+            ], MetadataColumns::values($model, $this->metadataKeys));
         } else {
             throw new LogicException('Unsupported export format.');
         }

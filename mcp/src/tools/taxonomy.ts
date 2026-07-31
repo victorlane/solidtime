@@ -1,20 +1,10 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { api } from '../client.js';
-import {
-    compact,
-    organizationIdSchema,
-    resolveOrganizationId,
-    uuid,
-} from '../shared.js';
+import { compact, organizationIdSchema, resolveOrganizationId, uuid } from '../shared.js';
 import { json, registerTool } from '../register.js';
 
-const page = z
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .describe('Page number — results are paginated.');
+const page = z.number().int().min(1).optional().describe('Page number — results are paginated.');
 
 export function registerTaskTools(server: McpServer): void {
     registerTool(server, {
@@ -34,12 +24,7 @@ export function registerTaskTools(server: McpServer): void {
         },
         handler: async ({ organization_id, ...query }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/tasks`,
-                    compact(query)
-                )
-            );
+            return json(await api.get(`/v1/organizations/${orgId}/tasks`, compact(query)));
         },
     });
 
@@ -62,12 +47,7 @@ export function registerTaskTools(server: McpServer): void {
         },
         handler: async ({ organization_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.post(
-                    `/v1/organizations/${orgId}/tasks`,
-                    compact(body)
-                )
-            );
+            return json(await api.post(`/v1/organizations/${orgId}/tasks`, compact(body)));
         },
     });
 
@@ -86,10 +66,7 @@ export function registerTaskTools(server: McpServer): void {
         handler: async ({ organization_id, task_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.put(
-                    `/v1/organizations/${orgId}/tasks/${task_id}`,
-                    compact(body)
-                )
+                await api.put(`/v1/organizations/${orgId}/tasks/${task_id}`, compact(body))
             );
         },
     });
@@ -105,11 +82,7 @@ export function registerTaskTools(server: McpServer): void {
         },
         handler: async ({ organization_id, task_id }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/tasks/${task_id}`
-                )
-            );
+            return json(await api.delete(`/v1/organizations/${orgId}/tasks/${task_id}`));
         },
     });
 }
@@ -130,37 +103,28 @@ export function registerClientTools(server: McpServer): void {
         },
         handler: async ({ organization_id, ...query }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/clients`,
-                    compact(query)
-                )
-            );
+            return json(await api.get(`/v1/organizations/${orgId}/clients`, compact(query)));
         },
     });
 
     registerTool(server, {
         name: 'create_client',
         title: 'Create client',
-        description:
-            'Create a client. Client names must be unique within the organization.',
+        description: 'Create a client. Client names must be unique within the organization.',
         schema: {
             organization_id: organizationIdSchema,
             name: z.string().min(1).max(255),
         },
         handler: async ({ organization_id, name }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.post(`/v1/organizations/${orgId}/clients`, { name })
-            );
+            return json(await api.post(`/v1/organizations/${orgId}/clients`, { name }));
         },
     });
 
     registerTool(server, {
         name: 'update_client',
         title: 'Update client',
-        description:
-            'Rename a client or change its archived state. name is required by the API.',
+        description: 'Rename a client or change its archived state. name is required by the API.',
         schema: {
             organization_id: organizationIdSchema,
             client_id: uuid,
@@ -170,10 +134,7 @@ export function registerClientTools(server: McpServer): void {
         handler: async ({ organization_id, client_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.put(
-                    `/v1/organizations/${orgId}/clients/${client_id}`,
-                    compact(body)
-                )
+                await api.put(`/v1/organizations/${orgId}/clients/${client_id}`, compact(body))
             );
         },
     });
@@ -190,11 +151,7 @@ export function registerClientTools(server: McpServer): void {
         },
         handler: async ({ organization_id, client_id }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/clients/${client_id}`
-                )
-            );
+            return json(await api.delete(`/v1/organizations/${orgId}/clients/${client_id}`));
         },
     });
 }
@@ -216,17 +173,14 @@ export function registerTagTools(server: McpServer): void {
     registerTool(server, {
         name: 'create_tag',
         title: 'Create tag',
-        description:
-            'Create a tag. Tag names must be unique within the organization.',
+        description: 'Create a tag. Tag names must be unique within the organization.',
         schema: {
             organization_id: organizationIdSchema,
             name: z.string().min(1).max(255),
         },
         handler: async ({ organization_id, name }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.post(`/v1/organizations/${orgId}/tags`, { name })
-            );
+            return json(await api.post(`/v1/organizations/${orgId}/tags`, { name }));
         },
     });
 
@@ -252,8 +206,7 @@ export function registerTagTools(server: McpServer): void {
     registerTool(server, {
         name: 'delete_tag',
         title: 'Delete tag',
-        description:
-            'Permanently delete a tag and remove it from all time entries.',
+        description: 'Permanently delete a tag and remove it from all time entries.',
         destructive: true,
         schema: {
             organization_id: organizationIdSchema,
@@ -261,9 +214,7 @@ export function registerTagTools(server: McpServer): void {
         },
         handler: async ({ organization_id, tag_id }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.delete(`/v1/organizations/${orgId}/tags/${tag_id}`)
-            );
+            return json(await api.delete(`/v1/organizations/${orgId}/tags/${tag_id}`));
         },
     });
 }

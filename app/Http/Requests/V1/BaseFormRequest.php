@@ -29,17 +29,18 @@ class BaseFormRequest extends FormRequest
     /**
      * Validation rules for a metadata object (string keys, string values, f.e. for references to external systems).
      *
+     * @param  string  $prefix  Path the metadata object lives under, f.e. "changes." for bulk update requests.
      * @return array<string, list<string>>
      */
-    protected function metadataRules(): array
+    protected function metadataRules(string $prefix = ''): array
     {
         return [
-            'metadata' => [
+            $prefix.'metadata' => [
                 'nullable',
                 'array',
                 'max:50',
             ],
-            'metadata.*' => [
+            $prefix.'metadata.*' => [
                 'string',
                 'max:500',
             ],

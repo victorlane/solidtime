@@ -22,9 +22,7 @@ interface ToolDefinition<Schema extends ZodRawShape> {
     readOnly?: boolean;
     /** Marks the tool as irreversible so clients prompt before running it. */
     destructive?: boolean;
-    handler: (
-        args: objectOutputType<Schema, ZodTypeAny>
-    ) => Promise<ToolResult>;
+    handler: (args: objectOutputType<Schema, ZodTypeAny>) => Promise<ToolResult>;
 }
 
 /**

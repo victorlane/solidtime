@@ -676,6 +676,7 @@ const TimeEntryResource = z
         tags: z.array(z.string()),
         billable: z.boolean(),
         type: TimeEntryType,
+        metadata: z.record(z.string()),
     })
     .passthrough();
 const TimeEntryStoreRequest = z
@@ -689,6 +690,7 @@ const TimeEntryStoreRequest = z
         type: TimeEntryType.optional(),
         description: z.union([z.string(), z.null()]).optional(),
         tags: z.union([z.array(z.string()), z.null()]).optional(),
+        metadata: z.union([z.record(z.string().max(500)), z.null()]).optional(),
     })
     .passthrough();
 const TimeEntryUpdateMultipleRequest = z
@@ -703,6 +705,7 @@ const TimeEntryUpdateMultipleRequest = z
                 type: TimeEntryType,
                 description: z.union([z.string(), z.null()]),
                 tags: z.union([z.array(z.string()), z.null()]),
+                metadata: z.union([z.record(z.string().max(500)), z.null()]),
             })
             .partial()
             .passthrough(),
@@ -719,6 +722,7 @@ const TimeEntryUpdateRequest = z
         type: TimeEntryType,
         description: z.union([z.string(), z.null()]),
         tags: z.union([z.array(z.string()), z.null()]),
+        metadata: z.union([z.record(z.string().max(500)), z.null()]),
     })
     .partial()
     .passthrough();
@@ -4533,6 +4537,11 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
             },
             {
                 name: 'debug',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
+                name: 'include_metadata',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
             },

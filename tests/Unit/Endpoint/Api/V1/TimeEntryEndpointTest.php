@@ -22,6 +22,7 @@ use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Service\ReportExport\TimeEntriesDetailedCsvExport;
 use App\Service\TimeEntryFilter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
@@ -43,6 +44,30 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
     {
         parent::setUp();
         Storage::fake('local');
+    }
+
+    /**
+     * The PDF exports render through a real Gotenberg instance (CI runs it as a service container, locally it
+     * comes from docker-compose). Without it the endpoint returns a bare 400 that looks like a code failure,
+     * so skip with a reason instead.
+     */
+    private function skipIfPdfRendererIsNotConfigured(): void
+    {
+        if (config('services.gotenberg.url') === null) {
+            $this->markTestSkipped('GOTENBERG_URL is not set — start Gotenberg (see .env.ci) to run the PDF export tests.');
+        }
+    }
+
+    /**
+     * The export endpoint only returns a temporary download URL, so read the generated file from the (faked) disk.
+     */
+    private function getExportedFileContent(): string
+    {
+        $disk = Storage::disk(config('filesystems.private'));
+        $files = $disk->files('exports');
+        $this->assertCount(1, $files, 'Expected exactly one export file');
+
+        return $disk->get($files[0]);
     }
 
     public function test_index_endpoint_fails_if_user_has_no_permission_to_view_time_entries(): void
@@ -946,6 +971,106 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         $this->assertResponseCode($response, 200);
     }
 
+    public function test_index_export_endpoint_csv_has_no_metadata_columns_if_include_metadata_is_not_set(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:all',
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->startWithDuration(Carbon::now(), 100)->create([
+            'metadata' => ['external_id' => '12345'],
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index-export', [
+            $data->organization->getKey(),
+            'format' => ExportFormat::CSV,
+            'start' => Carbon::now()->startOfYear()->toIso8601ZuluString(),
+            'end' => Carbon::now()->endOfYear()->toIso8601ZuluString(),
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $csv = $this->getExportedFileContent();
+        $this->assertStringNotContainsString('Metadata: ', $csv);
+        $this->assertStringNotContainsString('12345', $csv);
+    }
+
+    public function test_index_export_endpoint_csv_has_a_column_per_metadata_key_if_include_metadata_is_set(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:all',
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->startWithDuration(Carbon::now()->subHours(6), 100)->create([
+            'description' => 'Entry with two keys',
+            'metadata' => ['invoice_id' => 'in_123456789', 'external_id' => '12345'],
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->startWithDuration(Carbon::now()->subHours(4), 100)->create([
+            'description' => 'Entry with one key',
+            'metadata' => ['external_id' => '67890'],
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->startWithDuration(Carbon::now()->subHours(2), 100)->create([
+            'description' => 'Entry without metadata',
+            'metadata' => null,
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index-export', [
+            $data->organization->getKey(),
+            'format' => ExportFormat::CSV,
+            'include_metadata' => 'true',
+            'start' => Carbon::now()->startOfYear()->toIso8601ZuluString(),
+            'end' => Carbon::now()->endOfYear()->toIso8601ZuluString(),
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $rows = array_map('str_getcsv', array_filter(explode("\n", trim($this->getExportedFileContent()))));
+        // The union of all metadata keys becomes columns, sorted, appended after the fixed columns
+        $header = $rows[0];
+        $this->assertSame(['Metadata: external_id', 'Metadata: invoice_id'], array_slice($header, count(TimeEntriesDetailedCsvExport::HEADER)));
+        $this->assertCount(4, $rows);
+
+        $rowsByDescription = [];
+        foreach (array_slice($rows, 1) as $row) {
+            $rowsByDescription[$row[array_search('Description', $header, true)]] = array_combine($header, $row);
+        }
+        $this->assertSame('12345', $rowsByDescription['Entry with two keys']['Metadata: external_id']);
+        $this->assertSame('in_123456789', $rowsByDescription['Entry with two keys']['Metadata: invoice_id']);
+        $this->assertSame('67890', $rowsByDescription['Entry with one key']['Metadata: external_id']);
+        // A key that the entry does not have stays empty instead of shifting the columns
+        $this->assertSame('', $rowsByDescription['Entry with one key']['Metadata: invoice_id']);
+        $this->assertSame('', $rowsByDescription['Entry without metadata']['Metadata: external_id']);
+        $this->assertSame('', $rowsByDescription['Entry without metadata']['Metadata: invoice_id']);
+    }
+
+    public function test_index_export_endpoint_can_create_a_detailed_time_entry_report_with_metadata_in_format_xlsx(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:all',
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->startWithDuration(Carbon::now(), 100)->create([
+            'metadata' => ['external_id' => '12345'],
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index-export', [
+            $data->organization->getKey(),
+            'format' => ExportFormat::XLSX,
+            'include_metadata' => 'true',
+            'start' => Carbon::now()->startOfYear()->toIso8601ZuluString(),
+            'end' => Carbon::now()->endOfYear()->toIso8601ZuluString(),
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+    }
+
     public function test_index_export_endpoint_can_create_a_detailed_time_entry_report_in_format_ods(): void
     {
         // Arrange
@@ -996,6 +1121,8 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
 
     public function test_index_export_endpoint_can_create_a_detailed_time_entry_report_in_format_pdf(): void
     {
+        $this->skipIfPdfRendererIsNotConfigured();
+
         // Arrange
         $data = $this->createUserWithPermission([
             'time-entries:view:all',
@@ -1090,6 +1217,8 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
 
     public function test_index_export_endpoint_can_create_a_detailed_time_entry_report_in_format_pdf_as_employee_role_with_show_billable_rate(): void
     {
+        $this->skipIfPdfRendererIsNotConfigured();
+
         // Arrange
         $data = $this->createUserWithRole(Role::Employee, true);
         Passport::actingAs($data->user);
@@ -1183,6 +1312,8 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
 
     public function test_index_export_endpoint_can_create_a_detailed_time_entry_report_in_format_pdf_as_employee_role_without_show_billable_rate(): void
     {
+        $this->skipIfPdfRendererIsNotConfigured();
+
         // Arrange
         $data = $this->createUserWithRole(Role::Employee, false);
         Passport::actingAs($data->user);
@@ -1562,6 +1693,8 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
 
     public function test_aggregate_export_endpoints_can_create_a_pdf_report(): void
     {
+        $this->skipIfPdfRendererIsNotConfigured();
+
         // Arrange
         $data = $this->createUserWithPermission([
             'time-entries:view:all',
@@ -1590,6 +1723,8 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
 
     public function test_aggregate_export_endpoints_can_create_a_pdf_report_as_employee_role_with_show_billable_rate(): void
     {
+        $this->skipIfPdfRendererIsNotConfigured();
+
         // Arrange
         $data = $this->createUserWithRole(Role::Employee, true);
         $client = Client::factory()->forOrganization($data->organization)->create();
@@ -1617,6 +1752,8 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
 
     public function test_aggregate_export_endpoints_can_create_a_pdf_report_as_employee_role_without_show_billable_rate(): void
     {
+        $this->skipIfPdfRendererIsNotConfigured();
+
         // Arrange
         $data = $this->createUserWithRole(Role::Employee, false);
         $client = Client::factory()->forOrganization($data->organization)->create();
@@ -2267,6 +2404,64 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         ]);
     }
 
+    public function test_store_endpoint_creates_new_time_entry_with_metadata(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $timeEntryFake = TimeEntry::factory()->forOrganization($data->organization)->make();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'description' => $timeEntryFake->description,
+            'billable' => $timeEntryFake->billable,
+            'start' => $timeEntryFake->start->toIso8601ZuluString(),
+            'end' => $timeEntryFake->end->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'metadata' => [
+                'external_id' => '12345',
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+        $response->assertJson(fn (AssertableJson $json) => $json
+            ->has('data')
+            ->where('data.metadata.external_id', '12345')
+        );
+        /** @var TimeEntry $timeEntry */
+        $timeEntry = TimeEntry::query()->findOrFail($response->json('data.id'));
+        $this->assertSame(['external_id' => '12345'], $timeEntry->metadata);
+    }
+
+    public function test_store_endpoint_fails_if_metadata_value_is_not_a_string(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $timeEntryFake = TimeEntry::factory()->forOrganization($data->organization)->make();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'description' => $timeEntryFake->description,
+            'billable' => $timeEntryFake->billable,
+            'start' => $timeEntryFake->start->toIso8601ZuluString(),
+            'end' => $timeEntryFake->end->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'metadata' => [
+                'nested' => ['not' => 'allowed'],
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['metadata.nested']);
+    }
+
     public function test_store_endpoint_fails_gracefully_if_non_uuid_text_is_in_uuid_validated_field_in_body(): void
     {
         // Arrange
@@ -2862,6 +3057,80 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
             'member_id' => $data->member->getKey(),
             'task_id' => $timeEntryFake->task_id,
         ]);
+    }
+
+    public function test_update_endpoint_can_update_metadata(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'metadata' => [
+                'external_id' => '12345',
+            ],
+        ]);
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $response->assertJson(fn (AssertableJson $json) => $json
+            ->has('data')
+            ->where('data.metadata.external_id', '12345')
+        );
+        $timeEntry->refresh();
+        $this->assertSame(['external_id' => '12345'], $timeEntry->metadata);
+    }
+
+    public function test_update_endpoint_can_remove_metadata_with_null(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry->metadata = ['external_id' => '12345'];
+        $timeEntry->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'metadata' => null,
+        ]);
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $response->assertJson(fn (AssertableJson $json) => $json
+            ->has('data')
+            ->where('data.metadata', [])
+        );
+        $timeEntry->refresh();
+        $this->assertNull($timeEntry->metadata);
+    }
+
+    public function test_update_endpoint_does_not_change_metadata_if_not_sent(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry->metadata = ['external_id' => '12345'];
+        $timeEntry->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'description' => 'Updated description',
+        ]);
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $timeEntry->refresh();
+        $this->assertSame(['external_id' => '12345'], $timeEntry->metadata);
     }
 
     public function test_update_endpoints_sets_billable_rate(): void
@@ -5232,6 +5501,121 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         // Assert
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['tags']);
+    }
+
+    public function test_update_multiple_endpoint_can_update_metadata_of_all_given_time_entries(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry1 = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry2 = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry2->metadata = ['external_id' => 'old-value'];
+        $timeEntry2->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [
+                $timeEntry1->getKey(),
+                $timeEntry2->getKey(),
+            ],
+            'changes' => [
+                'metadata' => [
+                    'invoice_id' => 'in_123456789',
+                ],
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertEqualsCanonicalizing([$timeEntry1->getKey(), $timeEntry2->getKey()], $response->json('success'));
+        $timeEntry1->refresh();
+        $timeEntry2->refresh();
+        $this->assertSame(['invoice_id' => 'in_123456789'], $timeEntry1->metadata);
+        // The change replaces the whole metadata object, it does not merge into it
+        $this->assertSame(['invoice_id' => 'in_123456789'], $timeEntry2->metadata);
+    }
+
+    public function test_update_multiple_endpoint_can_remove_metadata_with_null(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry->metadata = ['external_id' => '12345'];
+        $timeEntry->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [
+                $timeEntry->getKey(),
+            ],
+            'changes' => [
+                'metadata' => null,
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $timeEntry->refresh();
+        $this->assertNull($timeEntry->metadata);
+    }
+
+    public function test_update_multiple_endpoint_does_not_change_metadata_if_not_sent(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry->metadata = ['external_id' => '12345'];
+        $timeEntry->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [
+                $timeEntry->getKey(),
+            ],
+            'changes' => [
+                'description' => 'Updated description',
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $timeEntry->refresh();
+        $this->assertSame(['external_id' => '12345'], $timeEntry->metadata);
+    }
+
+    public function test_update_multiple_endpoint_fails_if_metadata_value_is_not_a_string(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [
+                $timeEntry->getKey(),
+            ],
+            'changes' => [
+                'metadata' => [
+                    'nested' => ['not' => 'allowed'],
+                ],
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['changes.metadata.nested']);
     }
 
     public function test_update_multiple_endpoint_rejects_tags_change_for_break_entries(): void

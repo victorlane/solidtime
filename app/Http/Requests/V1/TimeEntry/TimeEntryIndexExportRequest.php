@@ -176,6 +176,11 @@ class TimeEntryIndexExportRequest extends TimeEntryIndexRequest
                 'string',
                 'in:true,false',
             ],
+            // Adds one column per metadata key that occurs in the exported time entries (not supported for the pdf format)
+            'include_metadata' => [
+                'string',
+                'in:true,false',
+            ],
             // Rounding type defined where the end of each time entry should be rounded to. For example: nearest rounds the end to the nearest x minutes group. Rounding per time entry is activated if `rounding_type` and `rounding_minutes` is not null.
             'rounding_type' => [
                 'nullable',
@@ -194,6 +199,11 @@ class TimeEntryIndexExportRequest extends TimeEntryIndexRequest
     public function getDebug(): bool
     {
         return $this->input('debug', 'false') === 'true';
+    }
+
+    public function getIncludeMetadata(): bool
+    {
+        return $this->input('include_metadata', 'false') === 'true';
     }
 
     public function getStart(): Carbon

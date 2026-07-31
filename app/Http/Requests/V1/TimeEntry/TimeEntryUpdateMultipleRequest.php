@@ -30,7 +30,7 @@ class TimeEntryUpdateMultipleRequest extends BaseFormRequest
      */
     public function rules(): array
     {
-        return [
+        return array_merge([
             'ids' => [
                 'required',
                 'array',
@@ -116,6 +116,6 @@ class TimeEntryUpdateMultipleRequest extends BaseFormRequest
                     return $builder->whereBelongsTo($this->organization, 'organization');
                 })->uuid(),
             ],
-        ];
+        ], $this->metadataRules('changes.'));
     }
 }

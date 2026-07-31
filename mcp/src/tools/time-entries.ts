@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { api } from '../client.js';
 import {
     compact,
+    metadataSchema,
     organizationIdSchema,
     resolveOrganizationId,
     toBooleanFilter,
@@ -30,9 +31,7 @@ const roundingType = z.enum(['up', 'down', 'nearest']);
 const roundingFields = {
     rounding_type: roundingType
         .optional()
-        .describe(
-            'Round each time entry end. Only applied when rounding_minutes is also set.'
-        ),
+        .describe('Round each time entry end. Only applied when rounding_minutes is also set.'),
     rounding_minutes: z
         .number()
         .int()
@@ -75,13 +74,8 @@ const filterFields = {
     start: utcTimestamp
         .optional()
         .describe('Only entries starting at or after this UTC timestamp.'),
-    end: utcTimestamp
-        .optional()
-        .describe('Only entries starting before this UTC timestamp.'),
-    active: z
-        .boolean()
-        .optional()
-        .describe('True returns only running entries (no end time).'),
+    end: utcTimestamp.optional().describe('Only entries starting before this UTC timestamp.'),
+    active: z.boolean().optional().describe('True returns only running entries (no end time).'),
     billable: z.boolean().optional().describe('Filter by billable flag.'),
 };
 
@@ -151,22 +145,13 @@ export function registerTimeEntryTools(server: McpServer): void {
             ...filterFields,
             ...roundingFields,
         },
-        handler: async ({
-            organization_id,
-            fill_gaps_in_time_groups,
-            ...rest
-        }) => {
+        handler: async ({ organization_id, fill_gaps_in_time_groups, ...rest }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/time-entries/aggregate`,
-                    {
-                        ...filtersToQuery(rest),
-                        fill_gaps_in_time_groups: toBooleanFilter(
-                            fill_gaps_in_time_groups
-                        ),
-                    }
-                )
+                await api.get(`/v1/organizations/${orgId}/time-entries/aggregate`, {
+                    ...filtersToQuery(rest),
+                    fill_gaps_in_time_groups: toBooleanFilter(fill_gaps_in_time_groups),
+                })
             );
         },
     });
@@ -186,28 +171,16 @@ export function registerTimeEntryTools(server: McpServer): void {
                 .nullable()
                 .optional()
                 .describe('End time in UTC. Omit or null to leave the timer running.'),
-            billable: z
-                .boolean()
-                .describe('Whether this entry is billable.'),
+            billable: z.boolean().describe('Whether this entry is billable.'),
             description: z.string().max(5000).nullable().optional(),
-            project_id: uuid
-                .nullable()
-                .optional()
-                .describe('Required when task_id is given.'),
+            project_id: uuid.nullable().optional().describe('Required when task_id is given.'),
             task_id: uuid.nullable().optional(),
-            tags: z
-                .array(uuid)
-                .optional()
-                .describe('Tag UUIDs to attach.'),
+            tags: z.array(uuid).optional().describe('Tag UUIDs to attach.'),
+            metadata: metadataSchema,
         },
         handler: async ({ organization_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.post(
-                    `/v1/organizations/${orgId}/time-entries`,
-                    compact(body)
-                )
-            );
+            return json(await api.post(`/v1/organizations/${orgId}/time-entries`, compact(body)));
         },
     });
 
@@ -229,10 +202,8 @@ export function registerTimeEntryTools(server: McpServer): void {
             description: z.string().max(5000).nullable().optional(),
             project_id: uuid.nullable().optional(),
             task_id: uuid.nullable().optional(),
-            tags: z
-                .array(uuid)
-                .optional()
-                .describe('Replaces the full tag list.'),
+            tags: z.array(uuid).optional().describe('Replaces the full tag list.'),
+            metadata: metadataSchema,
         },
         handler: async ({ organization_id, time_entry_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
@@ -261,6 +232,7 @@ export function registerTimeEntryTools(server: McpServer): void {
                     billable: z.boolean().optional(),
                     description: z.string().max(5000).nullable().optional(),
                     tags: z.array(uuid).nullable().optional(),
+                    metadata: metadataSchema,
                 })
                 .describe('Fields to apply to every listed entry.'),
         },
@@ -287,9 +259,7 @@ export function registerTimeEntryTools(server: McpServer): void {
         handler: async ({ organization_id, time_entry_id }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/time-entries/${time_entry_id}`
-                )
+                await api.delete(`/v1/organizations/${orgId}/time-entries/${time_entry_id}`)
             );
         },
     });
@@ -317,19 +287,16 @@ export function registerTimeEntryTools(server: McpServer): void {
     registerTool(server, {
         name: 'get_my_active_time_entry',
         title: 'Get my running timer',
-        description:
-            'Return the authenticated user\'s currently running time entry, if any.',
+        description: "Return the authenticated user's currently running time entry, if any.",
         readOnly: true,
         schema: {},
-        handler: async () =>
-            json(await api.get('/v1/users/me/time-entries/active')),
+        handler: async () => json(await api.get('/v1/users/me/time-entries/active')),
     });
 
     registerTool(server, {
         name: 'list_my_time_entries',
         title: 'List my time entries',
-        description:
-            'List time entries belonging to the authenticated user across organizations.',
+        description: 'List time entries belonging to the authenticated user across organizations.',
         readOnly: true,
         schema: {},
         handler: async () => json(await api.get('/v1/users/me/time-entries')),

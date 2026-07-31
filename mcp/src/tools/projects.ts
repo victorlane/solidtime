@@ -38,10 +38,7 @@ export function registerProjectTools(server: McpServer): void {
         handler: async ({ organization_id, archived, page }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/projects`,
-                    compact({ archived, page })
-                )
+                await api.get(`/v1/organizations/${orgId}/projects`, compact({ archived, page }))
             );
         },
     });
@@ -57,11 +54,7 @@ export function registerProjectTools(server: McpServer): void {
         },
         handler: async ({ organization_id, project_id }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/projects/${project_id}`
-                )
-            );
+            return json(await api.get(`/v1/organizations/${orgId}/projects/${project_id}`));
         },
     });
 
@@ -74,9 +67,7 @@ export function registerProjectTools(server: McpServer): void {
             organization_id: organizationIdSchema,
             name: z.string().min(1).max(255),
             color: colorSchema,
-            is_billable: z
-                .boolean()
-                .describe('Whether new time entries default to billable.'),
+            is_billable: z.boolean().describe('Whether new time entries default to billable.'),
             billable_rate: billableRateSchema,
             client_id: uuid
                 .nullable()
@@ -92,9 +83,7 @@ export function registerProjectTools(server: McpServer): void {
             is_public: z
                 .boolean()
                 .optional()
-                .describe(
-                    'Public projects are visible to every member, not just assigned ones.'
-                ),
+                .describe('Public projects are visible to every member, not just assigned ones.'),
         },
         handler: async ({ organization_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
@@ -128,10 +117,10 @@ export function registerProjectTools(server: McpServer): void {
         handler: async ({ organization_id, project_id, ...body }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.put(
-                    `/v1/organizations/${orgId}/projects/${project_id}`,
-                    { client_id: null, ...compact(body) }
-                )
+                await api.put(`/v1/organizations/${orgId}/projects/${project_id}`, {
+                    client_id: null,
+                    ...compact(body),
+                })
             );
         },
     });
@@ -148,11 +137,7 @@ export function registerProjectTools(server: McpServer): void {
         },
         handler: async ({ organization_id, project_id }) => {
             const orgId = resolveOrganizationId(organization_id);
-            return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/projects/${project_id}`
-                )
-            );
+            return json(await api.delete(`/v1/organizations/${orgId}/projects/${project_id}`));
         },
     });
 
@@ -169,9 +154,7 @@ export function registerProjectTools(server: McpServer): void {
         handler: async ({ organization_id, project_id }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.get(
-                    `/v1/organizations/${orgId}/projects/${project_id}/project-members`
-                )
+                await api.get(`/v1/organizations/${orgId}/projects/${project_id}/project-members`)
             );
         },
     });
@@ -208,17 +191,12 @@ export function registerProjectTools(server: McpServer): void {
             project_member_id: uuid,
             billable_rate: billableRateSchema,
         },
-        handler: async ({
-            organization_id,
-            project_member_id,
-            billable_rate,
-        }) => {
+        handler: async ({ organization_id, project_member_id, billable_rate }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.put(
-                    `/v1/organizations/${orgId}/project-members/${project_member_id}`,
-                    { billable_rate: billable_rate ?? null }
-                )
+                await api.put(`/v1/organizations/${orgId}/project-members/${project_member_id}`, {
+                    billable_rate: billable_rate ?? null,
+                })
             );
         },
     });
@@ -235,9 +213,7 @@ export function registerProjectTools(server: McpServer): void {
         handler: async ({ organization_id, project_member_id }) => {
             const orgId = resolveOrganizationId(organization_id);
             return json(
-                await api.delete(
-                    `/v1/organizations/${orgId}/project-members/${project_member_id}`
-                )
+                await api.delete(`/v1/organizations/${orgId}/project-members/${project_member_id}`)
             );
         },
     });

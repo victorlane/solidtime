@@ -26,6 +26,7 @@ function entry(
         billable: false,
         description: null,
         tags: [],
+        metadata: {},
     };
 }
 

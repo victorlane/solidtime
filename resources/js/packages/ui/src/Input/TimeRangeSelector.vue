@@ -75,59 +75,59 @@ const dropdownContent = ref();
 <template>
     <div ref="dropdownContent" class="flex flex-col py-2">
         <div class="grid grid-cols-2 divide-x divide-card-background-separator text-center">
-        <div class="px-2" @keydown.enter.prevent="nextTick(() => emit('close'))">
-            <div class="font-semibold text-text-primary text-sm pb-2">Start</div>
-            <div class="flex flex-col items-center space-y-2 w-28 mx-auto">
-                <TimePickerSimple
-                    v-model="tempStart"
-                    class="w-full"
-                    data-testid="time_entry_range_start"
-                    tabindex="0"
-                    :focus
-                    @keydown.exact.tab.shift.stop.prevent="emit('close')"
-                    @changed="updateTimeEntry"></TimePickerSimple>
-                <DatePicker
-                    v-model="tempStart"
-                    class="w-full"
-                    size="sm"
-                    @changed="updateTimeEntry"></DatePicker>
+            <div class="px-2" @keydown.enter.prevent="nextTick(() => emit('close'))">
+                <div class="font-semibold text-text-primary text-sm pb-2">Start</div>
+                <div class="flex flex-col items-center space-y-2 w-28 mx-auto">
+                    <TimePickerSimple
+                        v-model="tempStart"
+                        class="w-full"
+                        data-testid="time_entry_range_start"
+                        tabindex="0"
+                        :focus
+                        @keydown.exact.tab.shift.stop.prevent="emit('close')"
+                        @changed="updateTimeEntry"></TimePickerSimple>
+                    <DatePicker
+                        v-model="tempStart"
+                        class="w-full"
+                        size="sm"
+                        @changed="updateTimeEntry"></DatePicker>
+                </div>
             </div>
-        </div>
-        <div class="px-2">
-            <div class="font-semibold text-text-primary text-sm pb-2">End</div>
-            <div
-                v-if="end !== null && tempEnd !== null"
-                class="flex flex-col items-center space-y-2 w-28 mx-auto">
-                <TimePickerSimple
-                    v-model="tempEnd"
-                    class="w-full"
-                    data-testid="time_entry_range_end"
-                    @changed="updateTimeEntry"></TimePickerSimple>
-                <DatePicker
-                    v-model="tempEnd"
-                    class="w-full"
-                    size="sm"
-                    @changed="updateTimeEntry"></DatePicker>
+            <div class="px-2">
+                <div class="font-semibold text-text-primary text-sm pb-2">End</div>
+                <div
+                    v-if="end !== null && tempEnd !== null"
+                    class="flex flex-col items-center space-y-2 w-28 mx-auto">
+                    <TimePickerSimple
+                        v-model="tempEnd"
+                        class="w-full"
+                        data-testid="time_entry_range_end"
+                        @changed="updateTimeEntry"></TimePickerSimple>
+                    <DatePicker
+                        v-model="tempEnd"
+                        class="w-full"
+                        size="sm"
+                        @changed="updateTimeEntry"></DatePicker>
+                </div>
+                <div v-else-if="end === null && !showEndTimePicker">
+                    <Button variant="outline" size="sm" @click="setEndTime"> Set End Time </Button>
+                </div>
+                <div
+                    v-else-if="showEndTimePicker && tempEnd !== null"
+                    class="flex flex-col items-center space-y-2 w-28 mx-auto">
+                    <TimePickerSimple
+                        v-model="tempEnd"
+                        class="w-full"
+                        data-testid="time_entry_range_end"
+                        @keydown.enter.prevent.stop="confirmEndTime"></TimePickerSimple>
+                    <DatePicker v-model="tempEnd" class="w-full" size="sm"></DatePicker>
+                    <Button variant="outline" size="sm" class="w-full" @click="confirmEndTime">
+                        Confirm
+                    </Button>
+                </div>
+                <div v-else class="text-text-secondary">-- : --</div>
+                <div tabindex="0" @focusin="emit('close')"></div>
             </div>
-            <div v-else-if="end === null && !showEndTimePicker">
-                <Button variant="outline" size="sm" @click="setEndTime"> Set End Time </Button>
-            </div>
-            <div
-                v-else-if="showEndTimePicker && tempEnd !== null"
-                class="flex flex-col items-center space-y-2 w-28 mx-auto">
-                <TimePickerSimple
-                    v-model="tempEnd"
-                    class="w-full"
-                    data-testid="time_entry_range_end"
-                    @keydown.enter.prevent.stop="confirmEndTime"></TimePickerSimple>
-                <DatePicker v-model="tempEnd" class="w-full" size="sm"></DatePicker>
-                <Button variant="outline" size="sm" class="w-full" @click="confirmEndTime">
-                    Confirm
-                </Button>
-            </div>
-            <div v-else class="text-text-secondary">-- : --</div>
-            <div tabindex="0" @focusin="emit('close')"></div>
-        </div>
         </div>
         <div class="border-t border-card-background-separator mt-2 pt-2 px-2">
             <div class="font-semibold text-text-primary text-sm pb-2 text-center">Duration</div>

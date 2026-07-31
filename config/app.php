@@ -81,6 +81,12 @@ return [
 
     'enable_registration' => (bool) env('APP_ENABLE_REGISTRATION', false),
 
+    /*
+     * Hides the upgrade nags (billing banners, "Upgrade" badges and lock icons). Purely cosmetic:
+     * it does not unlock premium features, the API still enforces the plan.
+     */
+    'silence_premium' => (bool) env('SILENCE_PREMIUM', false),
+
     'local_email_verification' => (bool) env('APP_LOCAL_EMAIL_VERIFICATION', false),
 
     /*

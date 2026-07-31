@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
 
         return array_merge(parent::share($request), [
             'has_billing_extension' => $hasBilling,
+            'silence_premium' => config('app.silence_premium'),
             'has_invoicing_extension' => $hasInvoicing,
             'has_services_extension' => $hasServices,
             'billing' => $currentOrganization !== null ? [

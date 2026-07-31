@@ -28,6 +28,7 @@ const emptyTimeEntry = {
     billable: false,
     type: 'work',
     organization_id: '',
+    metadata: {},
 } as TimeEntry;
 
 export type ResumeTimeEntryContext = {

@@ -28,7 +28,7 @@ abstract class CsvExport
     private int $chunk;
 
     /**
-     * @var string[]
+     * @var list<string>
      */
     public const array HEADER = [];
 
@@ -61,6 +61,16 @@ abstract class CsvExport
     abstract public function mapRow(Model $model): array;
 
     /**
+     * The columns of the export. Override this if the columns are only known at runtime.
+     *
+     * @return list<string>
+     */
+    protected function header(): array
+    {
+        return static::HEADER;
+    }
+
+    /**
      * @throws CannotInsertRecord
      * @throws Exception
      * @throws UnavailableStream
@@ -72,14 +82,15 @@ abstract class CsvExport
         $writer->setDelimiter(',');
         $writer->setEnclosure('"');
         $writer->setEscape('');
-        $writer->insertOne(static::HEADER);
+        $header = $this->header();
+        $writer->insertOne($header);
 
-        $this->builder->chunk($this->chunk, function (Collection $models) use ($writer): void {
+        $this->builder->chunk($this->chunk, function (Collection $models) use ($writer, $header): void {
             /** @var T $model */
             foreach ($models as $model) {
                 $data = $this->mapRow($model);
                 $row = $this->convertRow($data);
-                $this->validateRow($row);
+                $this->validateRow($row, $header);
 
                 $writer->insertOne(array_values($row));
             }
@@ -112,10 +123,11 @@ abstract class CsvExport
 
     /**
      * @param  array<string, string>  $row
+     * @param  list<string>  $header
      */
-    private function validateRow(array $row): void
+    private function validateRow(array $row, array $header): void
     {
-        if (array_keys($row) !== static::HEADER) {
+        if (array_keys($row) !== $header) {
             throw new \LogicException('Invalid row');
         }
     }

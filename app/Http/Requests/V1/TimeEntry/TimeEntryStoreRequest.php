@@ -30,7 +30,7 @@ class TimeEntryStoreRequest extends BaseFormRequest
      */
     public function rules(): array
     {
-        return [
+        return array_merge([
             // ID of the organization member that the time entry should belong to
             'member_id' => [
                 'required',
@@ -119,6 +119,6 @@ class TimeEntryStoreRequest extends BaseFormRequest
                     return $builder->whereBelongsTo($this->organization, 'organization');
                 })->uuid(),
             ],
-        ];
+        ], $this->metadataRules());
     }
 }
