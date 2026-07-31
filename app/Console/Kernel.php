@@ -22,6 +22,12 @@ class Kernel extends ConsoleKernel
             ->when(fn (): bool => config('scheduling.tasks.auth_send_mails_expiring_api_tokens'))
             ->everyTenMinutes();
 
+        // Hourly because "end of week" is per member (week_start + timezone);
+        // the command itself gates on each member's local reminder moment.
+        $schedule->command('member:send-weekly-billable-target-mails')
+            ->when(fn (): bool => config('scheduling.tasks.member_send_weekly_billable_target_mails'))
+            ->hourly();
+
         if (config('app.key') && (config('scheduling.tasks.self_hosting_check_for_update') || config('scheduling.tasks.self_hosting_telemetry'))) {
             // Convert string to a stable integer for seeding
             /** @var int $seed Take the first 8 hex chars → 32-bit int */
