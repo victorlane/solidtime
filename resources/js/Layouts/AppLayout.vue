@@ -37,7 +37,7 @@ import {
     canViewReport,
     canViewTags,
 } from '@/utils/permissions';
-import { isBillingActivated, isInvoicingActivated } from '@/utils/billing';
+import { isBillingActivated, isInvoicingActivated, isPremiumSilenced } from '@/utils/billing';
 import type { User } from '@/types/models';
 import { ArrowsRightLeftIcon } from '@heroicons/vue/16/solid';
 import { fetchToken, isTokenValid } from '@/utils/session';
@@ -348,7 +348,7 @@ const page = usePage<{
 
                 <!-- Page Heading -->
                 <Banner />
-                <BillingBanner v-if="isBillingActivated()" />
+                <BillingBanner v-if="isBillingActivated() && !isPremiumSilenced()" />
 
                 <header
                     v-if="$slots.header"

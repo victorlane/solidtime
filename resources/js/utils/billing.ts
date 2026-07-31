@@ -9,6 +9,18 @@ export function isBillingActivated() {
     return page.props.has_billing_extension;
 }
 
+/**
+ * SILENCE_PREMIUM hides the upgrade nags. It does not unlock anything — the API still
+ * enforces the plan, so premium actions keep explaining themselves via the upgrade modal.
+ */
+export function isPremiumSilenced() {
+    const page = usePage<{
+        silence_premium: boolean;
+    }>();
+
+    return page.props.silence_premium === true;
+}
+
 export function isInvoicingActivated() {
     const page = usePage<{
         has_invoicing_extension: boolean;
