@@ -26,11 +26,21 @@ class ProjectIndexRequest extends BaseFormRequest
                 'string',
                 'in:true,false,all',
             ],
+            // Filter by whether the project is own-business work that must never be invoiced
+            'internal' => [
+                'string',
+                'in:true,false,all',
+            ],
         ];
     }
 
     public function getFilterArchived(): string
     {
         return $this->input('archived', 'false');
+    }
+
+    public function getFilterInternal(): string
+    {
+        return $this->input('internal', 'all');
     }
 }

@@ -225,6 +225,7 @@ function updateFilteredResults() {
                     billable_rate: null,
                     is_archived: false,
                     is_billable: false,
+                    is_internal: false,
                     expanded: false,
                     tasks: [],
                     estimated_time: null,

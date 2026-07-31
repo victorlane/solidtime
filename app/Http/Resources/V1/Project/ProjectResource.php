@@ -44,6 +44,8 @@ class ProjectResource extends BaseResource
             'billable_rate' => $this->showBillableRate ? $this->resource->billable_rate : null,
             /** @var bool $is_billable Project time entries billable default */
             'is_billable' => $this->resource->is_billable,
+            /** @var bool $is_internal Whether this is own-business work that must never be invoiced to a client */
+            'is_internal' => $this->resource->is_internal,
             /** @var int|null $estimated_time Estimated time in seconds */
             'estimated_time' => $this->resource->estimated_time,
             /** @var int $spent_time Spent time on this project in seconds (sum of the duration of all associated time entries, excl. still running time entries) */

@@ -28,6 +28,7 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * @property int|null $billable_rate
  * @property bool $is_public
  * @property bool $is_billable
+ * @property bool $is_internal
  * @property-read bool $is_archived
  * @property int|null $estimated_time
  * @property int $spent_time
@@ -66,6 +67,7 @@ class Project extends Model implements AuditableContract
         'estimated_time' => 'integer',
         'spent_time' => 'integer',
         'metadata' => 'array',
+        'is_internal' => 'boolean',
     ];
 
     /**
@@ -75,6 +77,7 @@ class Project extends Model implements AuditableContract
      */
     protected $attributes = [
         'is_billable' => false,
+        'is_internal' => false,
     ];
 
     /**

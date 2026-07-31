@@ -61,6 +61,13 @@ class ProjectController extends Controller
             $projectsQuery->whereNull('archived_at');
         }
 
+        $filterInternal = $request->getFilterInternal();
+        if ($filterInternal === 'true') {
+            $projectsQuery->where('is_internal', '=', true);
+        } elseif ($filterInternal === 'false') {
+            $projectsQuery->where('is_internal', '=', false);
+        }
+
         $projects = $projectsQuery
             ->orderBy('created_at', 'desc')
             ->orderBy('id')
@@ -105,6 +112,9 @@ class ProjectController extends Controller
         $project->name = $request->input('name');
         $project->color = $request->input('color');
         $project->is_billable = (bool) $request->input('is_billable');
+        if ($request->has('is_internal')) {
+            $project->is_internal = $request->boolean('is_internal');
+        }
         $project->billable_rate = $request->getBillableRate();
         $project->client_id = $request->input('client_id');
         $project->is_public = $request->getIsPublic();
@@ -134,6 +144,9 @@ class ProjectController extends Controller
         $project->name = $request->input('name');
         $project->color = $request->input('color');
         $project->is_billable = (bool) $request->input('is_billable');
+        if ($request->has('is_internal')) {
+            $project->is_internal = $request->boolean('is_internal');
+        }
         if ($request->has('is_archived')) {
             $project->archived_at = $request->getIsArchived() ? Carbon::now() : null;
         }
