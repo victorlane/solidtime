@@ -496,6 +496,106 @@ class ProjectEndpointTest extends ApiEndpointTestAbstract
         ]);
     }
 
+    public function test_store_endpoint_creates_an_internal_project(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'projects:create',
+        ]);
+        $projectFake = Project::factory()->forOrganization($data->organization)->make();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.projects.store', [$data->organization->getKey()]), [
+            'name' => $projectFake->name,
+            'color' => $projectFake->color,
+            'client_id' => null,
+            'is_billable' => false,
+            'is_internal' => true,
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.is_internal', true);
+        $this->assertDatabaseHas(Project::class, [
+            'id' => $response->json('data.id'),
+            'is_internal' => true,
+        ]);
+    }
+
+    public function test_store_endpoint_creates_a_non_internal_project_by_default(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'projects:create',
+        ]);
+        $projectFake = Project::factory()->forOrganization($data->organization)->make();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.projects.store', [$data->organization->getKey()]), [
+            'name' => $projectFake->name,
+            'color' => $projectFake->color,
+            'client_id' => null,
+            'is_billable' => true,
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+        // is_internal is deliberately independent of is_billable: a non-billable project is still
+        // client work at a zero rate and must keep producing an invoice line.
+        $response->assertJsonPath('data.is_internal', false);
+    }
+
+    public function test_index_endpoint_can_filter_out_internal_projects(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'projects:view',
+            'projects:view:all',
+        ]);
+        $clientProject = Project::factory()->forOrganization($data->organization)->create(['is_internal' => false]);
+        Project::factory()->forOrganization($data->organization)->create(['is_internal' => true]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.projects.index', [
+            $data->organization->getKey(),
+            'internal' => 'false',
+        ]));
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $clientProject->getKey());
+    }
+
+    public function test_update_endpoint_can_mark_a_project_as_internal(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'projects:update',
+        ]);
+        $project = Project::factory()->forOrganization($data->organization)->create(['is_internal' => false]);
+        $this->assertBillableRateServiceIsUnused();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.projects.update', [$data->organization->getKey(), $project->getKey()]), [
+            'name' => $project->name,
+            'color' => $project->color,
+            'is_billable' => $project->is_billable,
+            'client_id' => null,
+            'is_internal' => true,
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.is_internal', true);
+        $project->refresh();
+        $this->assertTrue($project->is_internal);
+    }
+
     public function test_store_endpoint_ignores_estimated_time_if_pro_features_are_disabled(): void
     {
         // Arrange

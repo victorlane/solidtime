@@ -6,6 +6,7 @@ import LastSevenDaysCard from '@/Components/Dashboard/LastSevenDaysCard.vue';
 import TeamActivityCard from '@/Components/Dashboard/TeamActivityCard.vue';
 import ThisWeekOverview from '@/Components/Dashboard/ThisWeekOverview.vue';
 import ActivityGraphCard from '@/Components/Dashboard/ActivityGraphCard.vue';
+import UrencriteriumCard from '@/Components/Dashboard/UrencriteriumCard.vue';
 import MainContainer from '@/packages/ui/src/MainContainer.vue';
 import { canViewMembers } from '@/utils/permissions';
 import { useQueryClient } from '@tanstack/vue-query';
@@ -24,6 +25,7 @@ const refreshDashboardData = () => {
     queryClient.invalidateQueries({ queryKey: ['totalWeeklyBillableAmount'] });
     queryClient.invalidateQueries({ queryKey: ['weeklyHistory'] });
     queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+    queryClient.invalidateQueries({ queryKey: ['urencriterium'] });
 };
 </script>
 
@@ -39,6 +41,7 @@ const refreshDashboardData = () => {
             <RecentlyTrackedTasksCard></RecentlyTrackedTasksCard>
             <LastSevenDaysCard></LastSevenDaysCard>
             <ActivityGraphCard></ActivityGraphCard>
+            <UrencriteriumCard></UrencriteriumCard>
             <TeamActivityCard v-if="canViewMembers()" class="flex lg:hidden xl:flex">
             </TeamActivityCard>
         </MainContainer>

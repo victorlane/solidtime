@@ -149,6 +149,22 @@ class TimeEntryIndexRequest extends BaseFormRequest
                 'string',
                 'in:true,false',
             ],
+            // Filter by a metadata key, f.e. to find entries an external system has not processed yet
+            'metadata_key' => [
+                'string',
+                'max:500',
+                'required_with:metadata_value,metadata_exists',
+            ],
+            // Exact value the metadata key must have
+            'metadata_value' => [
+                'string',
+                'max:500',
+            ],
+            // Whether the metadata key must be present (default) or absent
+            'metadata_exists' => [
+                'string',
+                'in:true,false',
+            ],
             // Filter by time entry type
             'type' => [
                 'string',

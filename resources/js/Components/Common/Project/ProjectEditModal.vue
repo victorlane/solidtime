@@ -20,6 +20,7 @@ import ProjectBillableRateModal from '@/packages/ui/src/Project/ProjectBillableR
 import { getOrganizationCurrencyString } from '@/utils/money';
 import ProjectEditBillableSection from '@/packages/ui/src/Project/ProjectEditBillableSection.vue';
 import ProjectVisibilitySelect from '@/packages/ui/src/Project/ProjectVisibilitySelect.vue';
+import ProjectInternalSelect from '@/packages/ui/src/Project/ProjectInternalSelect.vue';
 import { isAllowedToPerformPremiumAction } from '@/utils/billing';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
@@ -46,6 +47,7 @@ const project = ref<CreateProjectBody>({
     is_billable: props.originalProject.is_billable,
     estimated_time: props.originalProject.estimated_time,
     is_public: props.originalProject.is_public,
+    is_internal: props.originalProject.is_internal,
 });
 
 async function submit() {
@@ -129,6 +131,7 @@ async function submitBillableRate() {
                     v-model="project.estimated_time"
                     @submit="submit()"></EstimatedTimeSection>
                 <ProjectVisibilitySelect v-model="project.is_public"></ProjectVisibilitySelect>
+                <ProjectInternalSelect v-model="project.is_internal"></ProjectInternalSelect>
             </FieldGroup>
         </template>
         <template #footer>

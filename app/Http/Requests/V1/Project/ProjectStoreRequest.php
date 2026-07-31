@@ -55,6 +55,10 @@ class ProjectStoreRequest extends BaseFormRequest
                 'required',
                 'boolean',
             ],
+            // Whether this is own-business work (admin, acquisition, bookkeeping) that must never be invoiced
+            'is_internal' => [
+                'boolean',
+            ],
             'billable_rate' => array_merge(
                 [
                     'nullable',

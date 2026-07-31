@@ -235,6 +235,74 @@ class DashboardService
         return (int) $resultDb->get(0)->aggregate;
     }
 
+    /**
+     * Progress toward the Dutch urencriterium: 1225 hours spent on the business in a calendar year.
+     *
+     * Counts work time only - breaks are not hours spent on the business. Internal projects are
+     * deliberately included: admin, acquisition and bookkeeping legally count, which is exactly why
+     * they must be tracked even though they are never invoiced.
+     *
+     * @return array{
+     *     required_seconds: int,
+     *     tracked_seconds: int,
+     *     billable_seconds: int,
+     *     internal_seconds: int,
+     *     days_elapsed: int,
+     *     days_in_year: int,
+     *     projected_seconds: int,
+     *     required_seconds_per_remaining_day: int,
+     * }
+     */
+    public function urencriterium(User $user, Organization $organization, int $requiredHours = 1225): array
+    {
+        $timezone = $this->timezoneService->getTimezoneFromUser($user);
+        $now = Carbon::now($timezone);
+        $startOfYear = $now->copy()->startOfYear();
+        $endOfYear = $now->copy()->endOfYear();
+
+        $base = fn (): Builder => TimeEntry::query()
+            ->where('user_id', '=', $user->getKey())
+            ->where('organization_id', '=', $organization->getKey())
+            ->where('start', '>=', $startOfYear->copy()->utc())
+            ->where('start', '<=', $endOfYear->copy()->utc())
+            ->workTime();
+
+        $sum = 'round(sum(extract(epoch from (coalesce("end", now()) - start)))) as aggregate';
+
+        /** @var object{aggregate: int|null} $tracked */
+        $tracked = $base()->select(DB::raw($sum))->get()->get(0);
+        /** @var object{aggregate: int|null} $billable */
+        $billable = $base()->select(DB::raw($sum))->where('billable', '=', true)->get()->get(0);
+        /** @var object{aggregate: int|null} $internal */
+        $internal = $base()->select(DB::raw($sum))
+            ->whereHas('project', function (Builder $builder): void {
+                /** @var Builder<Project> $builder */
+                $builder->where('is_internal', '=', true);
+            })
+            ->get()->get(0);
+
+        $trackedSeconds = (int) ($tracked->aggregate ?? 0);
+        // Day 1 of the year counts as one elapsed day, so the pace on 1 January is not a division by zero
+        $daysElapsed = (int) $startOfYear->diffInDays($now) + 1;
+        $daysInYear = $now->isLeapYear() ? 366 : 365;
+        $daysRemaining = max($daysInYear - $daysElapsed, 0);
+        $requiredSeconds = $requiredHours * 3600;
+        $missingSeconds = max($requiredSeconds - $trackedSeconds, 0);
+
+        return [
+            'required_seconds' => $requiredSeconds,
+            'tracked_seconds' => $trackedSeconds,
+            'billable_seconds' => (int) ($billable->aggregate ?? 0),
+            'internal_seconds' => (int) ($internal->aggregate ?? 0),
+            'days_elapsed' => $daysElapsed,
+            'days_in_year' => $daysInYear,
+            'projected_seconds' => (int) round($trackedSeconds / $daysElapsed * $daysInYear),
+            'required_seconds_per_remaining_day' => $daysRemaining > 0
+                ? (int) ceil($missingSeconds / $daysRemaining)
+                : 0,
+        ];
+    }
+
     public function totalWeeklyBillableTime(User $user, Organization $organization): int
     {
         $timezone = $this->timezoneService->getTimezoneFromUser($user);

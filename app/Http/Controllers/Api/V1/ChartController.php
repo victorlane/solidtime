@@ -187,4 +187,21 @@ class ChartController extends Controller
 
         return response()->json($weeklyHistory);
     }
+
+    /**
+     * Get progress toward the Dutch urencriterium (1225 hours per calendar year).
+     *
+     * @throws AuthorizationException
+     *
+     * @operationId urencriterium
+     *
+     * @response array{required_seconds: int, tracked_seconds: int, billable_seconds: int, internal_seconds: int, days_elapsed: int, days_in_year: int, projected_seconds: int, required_seconds_per_remaining_day: int}
+     */
+    public function urencriterium(Organization $organization, DashboardService $dashboardService): JsonResponse
+    {
+        $this->checkPermission($organization, 'charts:view:own');
+        $user = $this->user();
+
+        return response()->json($dashboardService->urencriterium($user, $organization));
+    }
 }

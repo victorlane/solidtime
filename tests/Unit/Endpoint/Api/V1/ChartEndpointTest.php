@@ -271,6 +271,47 @@ class ChartEndpointTest extends EndpointTestAbstract
         $response->assertOk();
     }
 
+    public function test_urencriterium_endpoint_fails_if_user_has_no_permission_to_view_chart(): void
+    {
+        // Arrange
+        $user = $this->createUserWithPermission();
+        Passport::actingAs($user->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.charts.urencriterium', [
+            'organization' => $user->organization,
+        ]));
+
+        // Assert
+        $response->assertStatus(403);
+    }
+
+    public function test_urencriterium_endpoint_returns_progress_toward_the_1225_hours(): void
+    {
+        // Arrange
+        $user = $this->createUserWithPermission(['charts:view:own']);
+        Passport::actingAs($user->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.charts.urencriterium', [
+            'organization' => $user->organization,
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertJsonPath('required_seconds', 1225 * 3600);
+        $response->assertJsonStructure([
+            'required_seconds',
+            'tracked_seconds',
+            'billable_seconds',
+            'internal_seconds',
+            'days_elapsed',
+            'days_in_year',
+            'projected_seconds',
+            'required_seconds_per_remaining_day',
+        ]);
+    }
+
     public function test_weekly_history_endpoint_fails_if_user_has_no_permission_to_view_chart(): void
     {
         // Arrange

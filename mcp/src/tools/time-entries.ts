@@ -77,6 +77,24 @@ const filterFields = {
     end: utcTimestamp.optional().describe('Only entries starting before this UTC timestamp.'),
     active: z.boolean().optional().describe('True returns only running entries (no end time).'),
     billable: z.boolean().optional().describe('Filter by billable flag.'),
+    metadata_key: z
+        .string()
+        .max(500)
+        .optional()
+        .describe(
+            'Filter on a metadata key. Combine with metadata_exists=false to find entries an external system has not processed yet, e.g. metadata_key="invoice_id" + metadata_exists=false for hours that have not been invoiced.'
+        ),
+    metadata_value: z
+        .string()
+        .max(500)
+        .optional()
+        .describe('Exact value metadata_key must have. Requires metadata_key.'),
+    metadata_exists: z
+        .boolean()
+        .optional()
+        .describe(
+            'Whether metadata_key must be present (default true) or absent. Requires metadata_key.'
+        ),
 };
 
 function filtersToQuery(input: Record<string, unknown>) {
@@ -84,6 +102,7 @@ function filtersToQuery(input: Record<string, unknown>) {
         ...input,
         active: toBooleanFilter(input.active as boolean | undefined),
         billable: toBooleanFilter(input.billable as boolean | undefined),
+        metadata_exists: toBooleanFilter(input.metadata_exists as boolean | undefined),
     });
 }
 

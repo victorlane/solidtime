@@ -239,6 +239,111 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         $response->assertJsonPath('data.0.id', $activeTimeEntry->getKey());
     }
 
+    public function test_index_endpoint_returns_only_time_entries_without_the_given_metadata_key(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:own',
+        ]);
+        $unbilled = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $unrelatedMetadata = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $unrelatedMetadata->metadata = ['external_id' => '12345'];
+        $unrelatedMetadata->save();
+        $billed = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $billed->metadata = ['invoice_id' => 'in_123456789'];
+        $billed->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index', [
+            $data->organization->getKey(),
+            'member_id' => $data->member->getKey(),
+            'metadata_key' => 'invoice_id',
+            'metadata_exists' => 'false',
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        // Both a null metadata object and one that simply lacks the key count as "not invoiced yet"
+        $response->assertJsonCount(2, 'data');
+        $this->assertEqualsCanonicalizing(
+            [$unbilled->getKey(), $unrelatedMetadata->getKey()],
+            array_column($response->json('data'), 'id')
+        );
+    }
+
+    public function test_index_endpoint_returns_only_time_entries_with_the_given_metadata_key(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:own',
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $billed = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $billed->metadata = ['invoice_id' => 'in_123456789'];
+        $billed->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index', [
+            $data->organization->getKey(),
+            'member_id' => $data->member->getKey(),
+            'metadata_key' => 'invoice_id',
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $billed->getKey());
+    }
+
+    public function test_index_endpoint_returns_only_time_entries_with_the_given_metadata_value(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:own',
+        ]);
+        $wanted = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $wanted->metadata = ['invoice_id' => 'in_wanted'];
+        $wanted->save();
+        $other = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $other->metadata = ['invoice_id' => 'in_other'];
+        $other->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index', [
+            $data->organization->getKey(),
+            'member_id' => $data->member->getKey(),
+            'metadata_key' => 'invoice_id',
+            'metadata_value' => 'in_wanted',
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $wanted->getKey());
+    }
+
+    public function test_index_endpoint_validation_fails_if_metadata_value_is_sent_without_a_metadata_key(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:own',
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index', [
+            $data->organization->getKey(),
+            'metadata_value' => 'in_123456789',
+        ]));
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['metadata_key']);
+    }
+
     public function test_index_endpoint_returns_only_non_active_time_entries(): void
     {
         // Arrange

@@ -370,6 +370,7 @@ const ProjectResource = z
         is_archived: z.boolean(),
         billable_rate: z.union([z.number(), z.null()]),
         is_billable: z.boolean(),
+        is_internal: z.boolean(),
         estimated_time: z.union([z.number(), z.null()]),
         spent_time: z.number().int(),
         is_public: z.boolean(),
@@ -381,6 +382,7 @@ const ProjectStoreRequest = z
         name: z.string().min(1).max(255),
         color: z.string().max(255),
         is_billable: z.boolean(),
+        is_internal: z.boolean().optional(),
         billable_rate: z.union([z.number(), z.null()]).optional(),
         client_id: z.union([z.string(), z.null()]).optional(),
         estimated_time: z.union([z.number(), z.null()]).optional(),
@@ -393,6 +395,7 @@ const ProjectUpdateRequest = z
         name: z.string().max(255),
         color: z.string().max(255),
         is_billable: z.boolean(),
+        is_internal: z.boolean().optional(),
         is_archived: z.boolean().optional(),
         is_public: z.boolean().optional(),
         client_id: z.union([z.string(), z.null()]).optional(),
@@ -1249,6 +1252,48 @@ const endpoints = makeApi([
             },
         ],
         response: z.array(z.object({ date: z.string(), duration: z.number().int() }).passthrough()),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
+        path: '/v1/organizations/:organization/charts/urencriterium',
+        alias: 'urencriterium',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z
+            .object({
+                required_seconds: z.number().int(),
+                tracked_seconds: z.number().int(),
+                billable_seconds: z.number().int(),
+                internal_seconds: z.number().int(),
+                days_elapsed: z.number().int(),
+                days_in_year: z.number().int(),
+                projected_seconds: z.number().int(),
+                required_seconds_per_remaining_day: z.number().int(),
+            })
+            .passthrough(),
         errors: [
             {
                 status: 401,
@@ -3782,6 +3827,21 @@ Users with the permission &#x60;time-entries:view:own&#x60; can only use this en
                 schema: TimeEntryType.optional(),
             },
             {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
                 name: 'limit',
                 type: 'Query',
                 schema: z.number().int().gte(1).lte(500).optional(),
@@ -4192,6 +4252,21 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 schema: TimeEntryType.optional(),
             },
             {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
                 name: 'fill_gaps_in_time_groups',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
@@ -4393,6 +4468,21 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 schema: TimeEntryType.optional(),
             },
             {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
+            },
+            {
                 name: 'fill_gaps_in_time_groups',
                 type: 'Query',
                 schema: z.enum(['true', 'false']).optional(),
@@ -4524,6 +4614,21 @@ If the group parameters are all set to &#x60;null&#x60; or are all missing, the 
                 name: 'type',
                 type: 'Query',
                 schema: TimeEntryType.optional(),
+            },
+            {
+                name: 'metadata_key',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_value',
+                type: 'Query',
+                schema: z.string().max(500).optional(),
+            },
+            {
+                name: 'metadata_exists',
+                type: 'Query',
+                schema: z.enum(['true', 'false']).optional(),
             },
             {
                 name: 'limit',

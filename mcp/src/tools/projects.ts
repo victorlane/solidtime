@@ -68,6 +68,12 @@ export function registerProjectTools(server: McpServer): void {
             name: z.string().min(1).max(255),
             color: colorSchema,
             is_billable: z.boolean().describe('Whether new time entries default to billable.'),
+            is_internal: z
+                .boolean()
+                .optional()
+                .describe(
+                    'Own-business work (admin, acquisition, bookkeeping) that must never be invoiced to a client. Independent of is_billable: a non-billable project is still client work at a zero rate and keeps producing an invoice line.'
+                ),
             billable_rate: billableRateSchema,
             client_id: uuid
                 .nullable()
@@ -108,6 +114,12 @@ export function registerProjectTools(server: McpServer): void {
             name: z.string().min(1).max(255),
             color: colorSchema,
             is_billable: z.boolean(),
+            is_internal: z
+                .boolean()
+                .optional()
+                .describe(
+                    'Own-business work (admin, acquisition, bookkeeping) that must never be invoiced to a client. Independent of is_billable: a non-billable project is still client work at a zero rate and keeps producing an invoice line.'
+                ),
             billable_rate: billableRateSchema,
             client_id: uuid.nullable().optional(),
             estimated_time: z.number().int().min(0).nullable().optional(),
