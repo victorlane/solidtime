@@ -117,6 +117,29 @@ class ProjectModelTest extends ModelTestAbstract
         ], $allProjects);
     }
 
+    public function test_scope_writable_by_employee_filters_so_that_only_projects_where_the_user_is_member_are_shown(): void
+    {
+        // Arrange
+        $member = Member::factory()->create();
+        $projectPrivate = Project::factory()->isPrivate()->create();
+        $projectPublic = Project::factory()->isPublic()->create();
+        $projectPrivateButMember = Project::factory()->isPrivate()->create();
+        ProjectMember::factory()->forProject($projectPrivateButMember)->forMember($member)->create();
+        $projectPublicAndMember = Project::factory()->isPublic()->create();
+        ProjectMember::factory()->forProject($projectPublicAndMember)->forMember($member)->create();
+
+        // Act
+        $projectsWritable = Project::query()->writableByEmployee($member->user)->get();
+
+        // Assert
+        $this->assertEqualsIdsOfEloquentCollection([
+            $projectPrivateButMember->getKey(),
+            $projectPublicAndMember->getKey(),
+        ], $projectsWritable);
+        $this->assertNotContains($projectPublic->getKey(), $projectsWritable->pluck('id')->all());
+        $this->assertNotContains($projectPrivate->getKey(), $projectsWritable->pluck('id')->all());
+    }
+
     public function test_computed_spent_time_returns_the_sum_of_all_time_entries_excl_running_timers(): void
     {
         // Arrange

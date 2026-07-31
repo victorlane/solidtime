@@ -6,6 +6,7 @@ namespace App\Console\Commands\Member;
 
 use App\Mail\WeeklyBillableTargetReminderMail;
 use App\Models\Member;
+use App\Models\Project;
 use App\Models\User;
 use App\Service\BillableTargetService;
 use App\Service\TimezoneService;
@@ -88,12 +89,16 @@ class MemberSendWeeklyBillableTargetMailsCommand extends Command
                     $anyProjectBehind = false;
                     foreach ($member->projectMembers as $projectMember) {
                         $projectTarget = $projectMember->weekly_billable_target;
-                        if ($projectTarget === null || $projectMember->project === null) {
+                        // The relation is declared non-nullable, but a project deleted
+                        // out from under the membership still has to be skipped.
+                        /** @var Project|null $project */
+                        $project = $projectMember->project;
+                        if ($projectTarget === null || $project === null) {
                             continue;
                         }
                         $projectTracked = $billableTargetService->billableSeconds($member, $projectMember->project_id, $weekStart, $weekEnd);
                         $projectRows[] = [
-                            'name' => $projectMember->project->name,
+                            'name' => $project->name,
                             'tracked' => $projectTracked,
                             'target' => $projectTarget,
                         ];

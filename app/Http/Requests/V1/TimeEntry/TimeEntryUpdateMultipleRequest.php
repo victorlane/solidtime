@@ -61,11 +61,12 @@ class TimeEntryUpdateMultipleRequest extends BaseFormRequest
                     /** @var Builder<Project> $builder */
                     $builder = $builder->whereBelongsTo($this->organization, 'organization');
 
-                    // If user doesn't have 'all' permission for time entries or projects, only allow access to public projects or projects they're a member of
+                    // Employees may only book time on projects they are a member of.
+                    // Seeing a public project is not enough to write to it.
                     $permissionStore = app(PermissionStore::class);
                     if (! $permissionStore->has($this->organization, 'time-entries:update:all')
                         && ! $permissionStore->has($this->organization, 'projects:view:all')) {
-                        $builder = $builder->visibleByEmployee(Auth::user());
+                        $builder = $builder->writableByEmployee(Auth::user());
                     }
 
                     return $builder;

@@ -28,10 +28,13 @@ class BillableTargetService
             $query->where('project_id', '=', $projectId);
         }
 
-        $value = $query
+        // An aggregate without GROUP BY always yields exactly one row, but the
+        // sum itself is null when no time entries matched.
+        /** @var object{ aggregate: string|null } $result */
+        $result = $query
             ->selectRaw('round(sum(extract(epoch from (coalesce("end", now()) - start)))) as aggregate')
-            ->value('aggregate');
+            ->first();
 
-        return (int) ($value ?? 0);
+        return (int) ($result->aggregate ?? 0);
     }
 }

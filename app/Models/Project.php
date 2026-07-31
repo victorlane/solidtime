@@ -41,6 +41,7 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * @property-read Collection<int, ProjectMember> $members
  *
  * @method Builder<Project> visibleByEmployee(User $user)
+ * @method Builder<Project> writableByEmployee(User $user)
  * @method static ProjectFactory factory()
  */
 class Project extends Model implements AuditableContract
@@ -188,6 +189,20 @@ class Project extends Model implements AuditableContract
                 ->orWhereHas('members', function (Builder $builder) use ($user): Builder {
                     return $builder->whereBelongsTo($user, 'user');
                 });
+        });
+    }
+
+    /**
+     * Projects an employee may book time on. Stricter than visibleByEmployee:
+     * being able to see a public project is not enough, the employee has to be
+     * a member of it.
+     *
+     * @param  Builder<Project>  $builder
+     */
+    public function scopeWritableByEmployee(Builder $builder, User $user): void
+    {
+        $builder->whereHas('members', function (Builder $builder) use ($user): Builder {
+            return $builder->whereBelongsTo($user, 'user');
         });
     }
 

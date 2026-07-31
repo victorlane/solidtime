@@ -17,6 +17,7 @@ use App\Jobs\RecalculateSpentTimeForTask;
 use App\Models\Client;
 use App\Models\Member;
 use App\Models\Project;
+use App\Models\ProjectMember;
 use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -2323,6 +2324,66 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         ]);
     }
 
+    public function test_store_endpoint_fails_if_employee_tries_to_create_time_entry_for_public_project_they_are_not_a_member_of(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+
+        // A public project is visible to the employee, but they are not a member of it
+        $publicProject = Project::factory()->forOrganization($data->organization)->isPublic()->create();
+
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'description' => 'Test time entry',
+            'billable' => false,
+            'start' => now()->toIso8601ZuluString(),
+            'end' => now()->addHour()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'project_id' => $publicProject->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['project_id']);
+        $this->assertDatabaseMissing(TimeEntry::class, [
+            'project_id' => $publicProject->getKey(),
+            'member_id' => $data->member->getKey(),
+        ]);
+    }
+
+    public function test_store_endpoint_succeeds_if_employee_creates_time_entry_for_private_project_they_are_a_member_of(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $project = Project::factory()->forOrganization($data->organization)->isPrivate()->create();
+        ProjectMember::factory()->forProject($project)->forMember($data->member)->create();
+
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'description' => 'Test time entry',
+            'billable' => false,
+            'start' => now()->toIso8601ZuluString(),
+            'end' => now()->addHour()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'project_id' => $project->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+        $this->assertDatabaseHas(TimeEntry::class, [
+            'project_id' => $project->getKey(),
+            'member_id' => $data->member->getKey(),
+        ]);
+    }
+
     public function test_store_endpoints_sets_billable_rate(): void
     {
         // Arrange
@@ -2541,6 +2602,58 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         $this->assertDatabaseMissing(TimeEntry::class, [
             'id' => $timeEntry->getKey(),
             'project_id' => $privateProject->getKey(),
+        ]);
+    }
+
+    public function test_update_endpoint_fails_if_employee_tries_to_update_time_entry_to_public_project_they_are_not_a_member_of(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+
+        // A public project is visible to the employee, but they are not a member of it
+        $publicProject = Project::factory()->forOrganization($data->organization)->isPublic()->create();
+
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'project_id' => $publicProject->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['project_id']);
+        $this->assertDatabaseMissing(TimeEntry::class, [
+            'id' => $timeEntry->getKey(),
+            'project_id' => $publicProject->getKey(),
+        ]);
+    }
+
+    public function test_update_endpoint_succeeds_if_employee_updates_time_entry_to_project_they_are_a_member_of(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $project = Project::factory()->forOrganization($data->organization)->isPrivate()->create();
+        ProjectMember::factory()->forProject($project)->forMember($data->member)->create();
+
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'project_id' => $project->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertDatabaseHas(TimeEntry::class, [
+            'id' => $timeEntry->getKey(),
+            'project_id' => $project->getKey(),
         ]);
     }
 
@@ -3487,6 +3600,41 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         $this->assertDatabaseMissing(TimeEntry::class, [
             'id' => $timeEntry2->getKey(),
             'project_id' => $privateProject->getKey(),
+        ]);
+    }
+
+    public function test_update_multiple_endpoint_fails_if_employee_tries_to_update_time_entries_to_public_project_they_are_not_a_member_of(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $timeEntry1 = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        $timeEntry2 = TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+
+        // A public project is visible to the employee, but they are not a member of it
+        $publicProject = Project::factory()->forOrganization($data->organization)->isPublic()->create();
+
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [$timeEntry1->getKey(), $timeEntry2->getKey()],
+            'changes' => [
+                'project_id' => $publicProject->getKey(),
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['changes.project_id']);
+        $this->assertDatabaseMissing(TimeEntry::class, [
+            'id' => $timeEntry1->getKey(),
+            'project_id' => $publicProject->getKey(),
+        ]);
+        $this->assertDatabaseMissing(TimeEntry::class, [
+            'id' => $timeEntry2->getKey(),
+            'project_id' => $publicProject->getKey(),
         ]);
     }
 
