@@ -239,6 +239,29 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         $response->assertJsonPath('data.0.id', $activeTimeEntry->getKey());
     }
 
+    public function test_index_endpoint_serialises_empty_metadata_as_an_object_not_an_array(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:own',
+        ]);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($data->member)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.index', [
+            $data->organization->getKey(),
+            'member_id' => $data->member->getKey(),
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        // PHP encodes an empty array as [], which would make this field change JSON type
+        // depending on whether it is populated. A typed client then fails to decode it.
+        $this->assertStringContainsString('"metadata":{}', $response->getContent());
+        $this->assertStringNotContainsString('"metadata":[]', $response->getContent());
+    }
+
     public function test_index_endpoint_returns_only_time_entries_without_the_given_metadata_key(): void
     {
         // Arrange
