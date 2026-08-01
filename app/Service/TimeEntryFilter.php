@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Enums\TagMatchType;
 use App\Enums\TimeEntryType;
 use App\Models\Member;
+use App\Models\Project;
 use App\Models\TimeEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -277,6 +278,23 @@ class TimeEntryFilter
             if ($includeNone) {
                 $builder->orWhereNull('task_id');
             }
+        });
+
+        return $this;
+    }
+
+    /**
+     * Drop time entries that belong to an internal project.
+     *
+     * Internal projects are own-business work (admin, sales, learning). They must never end up on
+     * anything a client sees. Entries without a project are kept: they cannot be internal, and
+     * dropping them would silently hide tracked hours from a specification that has to add up.
+     */
+    public function addExcludeInternalProjects(): self
+    {
+        $this->builder->whereDoesntHave('project', function (Builder $builder): void {
+            /** @var Builder<Project> $builder */
+            $builder->where('is_internal', '=', true);
         });
 
         return $this;
