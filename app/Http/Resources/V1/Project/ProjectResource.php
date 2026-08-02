@@ -25,7 +25,7 @@ class ProjectResource extends BaseResource
     /**
      * Transform the resource into an array.
      *
-     * @return array<string, string|bool|int|array<string, string>|null>
+     * @return array<string, string|bool|int|\stdClass|null>
      */
     public function toArray(Request $request): array
     {
@@ -53,7 +53,10 @@ class ProjectResource extends BaseResource
             /** @var bool $is_public Whether the project is public */
             'is_public' => $this->resource->is_public,
             /** @var array<string, string> $metadata Custom metadata as key-value pairs, f.e. for linking the project to external systems */
-            'metadata' => $this->resource->metadata ?? [],
+            // Cast to object so an empty metadata map serialises as {} rather than [].
+            // PHP encodes an empty array as a JSON array, which makes the field change
+            // type depending on whether it happens to be populated and breaks typed clients.
+            'metadata' => (object) ($this->resource->metadata ?? []),
         ];
     }
 }

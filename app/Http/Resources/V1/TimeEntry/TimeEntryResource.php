@@ -16,7 +16,7 @@ class TimeEntryResource extends BaseResource
     /**
      * Transform the resource into an array.
      *
-     * @return array<string, string|bool|int|null|array<string>|array<string, string>>
+     * @return array<string, string|bool|int|null|array<string>|\stdClass>
      */
     public function toArray(Request $request): array
     {
@@ -50,7 +50,10 @@ class TimeEntryResource extends BaseResource
             /** @var string $type Type of the time entry (`work` time or a `break`) */
             'type' => $this->resource->type->value,
             /** @var array<string, string> $metadata Custom metadata as key-value pairs, f.e. for linking the time entry to external systems */
-            'metadata' => $this->resource->metadata ?? [],
+            // Cast to object so an empty metadata map serialises as {} rather than [].
+            // PHP encodes an empty array as a JSON array, which makes the field change
+            // type depending on whether it happens to be populated and breaks typed clients.
+            'metadata' => (object) ($this->resource->metadata ?? []),
         ];
     }
 }

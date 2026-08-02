@@ -27,7 +27,7 @@ class ProjectCollection extends ResourceCollection implements PaginatedResourceC
     /**
      * Transform the resource collection into an array.
      *
-     * @return array<array<string, string|bool|int|array<string, string>|null>>
+     * @return array<array<string, string|bool|int|\stdClass|null>>
      */
     public function toArray(Request $request): array
     {

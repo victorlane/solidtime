@@ -25,3 +25,5 @@ playwright-report/
 # Ignore OS files
 .DS_Store
 Thumbs.db 
+# Agent worktrees are full checkouts; linting them double-reports every file
+.claude/worktrees/
