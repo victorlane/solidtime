@@ -111,6 +111,7 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
         Route::name('time-entries.')->prefix('/organizations/{organization}')->group(static function (): void {
             Route::get('/time-entries', [TimeEntryController::class, 'index'])->name('index');
             Route::get('/time-entries/export', [TimeEntryController::class, 'indexExport'])->name('index-export');
+            Route::get('/time-entries/hours-specification/export', [TimeEntryController::class, 'hoursSpecificationExport'])->name('hours-specification-export');
             Route::get('/time-entries/aggregate', [TimeEntryController::class, 'aggregate'])->name('aggregate');
             Route::get('/time-entries/aggregate/export', [TimeEntryController::class, 'aggregateExport'])->name('aggregate-export');
             Route::post('/time-entries', [TimeEntryController::class, 'store'])->name('store')->middleware('check-organization-blocked');

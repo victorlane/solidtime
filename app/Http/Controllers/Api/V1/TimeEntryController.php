@@ -15,6 +15,7 @@ use App\Exceptions\Api\TimeEntryStillRunningApiException;
 use App\Http\Requests\V1\TimeEntry\TimeEntryAggregateExportRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryAggregateRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryDestroyMultipleRequest;
+use App\Http\Requests\V1\TimeEntry\TimeEntryHoursSpecificationExportRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryIndexExportRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryIndexRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryStoreRequest;
@@ -29,6 +30,7 @@ use App\Models\Organization;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Service\HoursSpecificationService;
 use App\Service\LocalizationService;
 use App\Service\ReportExport\MetadataColumns;
 use App\Service\ReportExport\TimeEntriesDetailedCsvExport;
@@ -314,25 +316,9 @@ class TimeEntryController extends Controller
                 ]);
             }
 
-            $client = new Client([
-                'auth' => config('services.gotenberg.basic_auth_username') !== null && config('services.gotenberg.basic_auth_password') !== null ? [
-                    config('services.gotenberg.basic_auth_username'),
-                    config('services.gotenberg.basic_auth_password'),
-                ] : null,
+            $this->renderPdfToPrivateDisk($html, $footerHtml, $folderPath, $filename, [
+                Stream::path(resource_path('pdf/Outfit-VariableFont_wght.ttf'), 'outfit.ttf'),
             ]);
-            $request = Gotenberg::chromium(config('services.gotenberg.url'))
-                ->pdf()
-                ->assets(
-                    Stream::path(resource_path('pdf/Outfit-VariableFont_wght.ttf'), 'outfit.ttf'),
-                )
-                ->margins(0.39, 0.78, 0.39, 0.39)
-                ->paperSize('8.27', '11.7') // A4
-                ->footer(Stream::string('footer', $footerHtml))
-                ->html(Stream::string('body', $html));
-            $tempFolder = TemporaryDirectory::make();
-            $filenameTemp = Gotenberg::save($request, $tempFolder->path(), $client);
-            Storage::disk(config('filesystems.private'))
-                ->putFileAs($folderPath, new File($tempFolder->path($filenameTemp)), $filename);
         } else {
             Excel::store(
                 new TimeEntriesDetailedExport($timeEntriesQuery, $format, $timezone, $localizationService, $metadataKeys),
@@ -496,12 +482,6 @@ class TimeEntryController extends Controller
             if (config('services.gotenberg.url') === null && ! $debug) {
                 throw new PdfRendererIsNotConfiguredException;
             }
-            $client = new Client([
-                'auth' => config('services.gotenberg.basic_auth_username') !== null && config('services.gotenberg.basic_auth_password') !== null ? [
-                    config('services.gotenberg.basic_auth_username'),
-                    config('services.gotenberg.basic_auth_password'),
-                ] : null,
-            ]);
             $viewFile = file_get_contents(resource_path('views/reports/time-entry-aggregate/pdf.blade.php'));
             if ($viewFile === false) {
                 throw new \LogicException('View file not found');
@@ -530,20 +510,10 @@ class TimeEntryController extends Controller
                     'footer_html' => $footerHtml,
                 ]);
             }
-            $request = Gotenberg::chromium(config('services.gotenberg.url'))
-                ->pdf()
-                ->waitForExpression("window.status === 'ready'")
-                ->margins(0.39, 0.78, 0.39, 0.39)
-                ->paperSize('8.27', '11.7') // A4
-                ->footer(Stream::string('footer', $footerHtml))
-                ->assets(Stream::path(resource_path('pdf/echarts.min.js'), 'echarts.min.js'),
-                    Stream::path(resource_path('pdf/Outfit-VariableFont_wght.ttf'), 'outfit.ttf'),
-                )
-                ->html(Stream::string('body', $html));
-            $tempFolder = TemporaryDirectory::make();
-            $filenameTemp = Gotenberg::save($request, $tempFolder->path(), $client);
-            Storage::disk(config('filesystems.private'))
-                ->putFileAs($folderPath, new File($tempFolder->path($filenameTemp)), $filename);
+            $this->renderPdfToPrivateDisk($html, $footerHtml, $folderPath, $filename, [
+                Stream::path(resource_path('pdf/echarts.min.js'), 'echarts.min.js'),
+                Stream::path(resource_path('pdf/Outfit-VariableFont_wght.ttf'), 'outfit.ttf'),
+            ], true);
         } else {
             Excel::store(
                 new TimeEntriesReportExport($aggregatedData, $format, $currency, $group, $subGroup, $showBillableRate),
@@ -560,6 +530,133 @@ class TimeEntryController extends Controller
             'download_url' => Storage::disk(config('filesystems.private'))
                 ->temporaryUrl($path, now()->addMinutes(5)),
         ]);
+    }
+
+    /**
+     * Export an hours specification as PDF
+     *
+     * The document that goes with a client invoice ("urenspecificatie"): the tracked hours for the
+     * period, grouped by project and day, with the organization in the header and a total at the
+     * bottom. It takes the same filters as the detailed export, so it can be scoped to one client
+     * for one month. Time entries on internal projects, breaks and running timers are never part
+     * of it.
+     *
+     * @throws AuthorizationException|PdfRendererIsNotConfiguredException|FeatureIsNotAvailableInFreePlanApiException
+     * @throws GotenbergApiErrored
+     * @throws NoOutputFileInResponse
+     *
+     * @operationId exportHoursSpecification
+     */
+    public function hoursSpecificationExport(Organization $organization, TimeEntryHoursSpecificationExportRequest $request, HoursSpecificationService $hoursSpecificationService): JsonResponse
+    {
+        $member = $this->member($organization);
+        /** @var Member|null $memberFilter */
+        $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
+        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
+            $this->checkPermission($organization, 'time-entries:view:own');
+        } else {
+            $this->checkPermission($organization, 'time-entries:view:all');
+        }
+        $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
+        if (! $canAccessPremiumFeatures) {
+            throw new FeatureIsNotAvailableInFreePlanApiException;
+        }
+        $debug = $request->getDebug();
+        if (config('services.gotenberg.url') === null && ! $debug) {
+            throw new PdfRendererIsNotConfiguredException;
+        }
+        $user = $this->user();
+        $timezone = app(TimezoneService::class)->getTimezoneFromUser($user)->getName();
+        $showBillableRate = $member->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
+        $showAmounts = $request->getIncludeAmounts() && $showBillableRate;
+
+        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures);
+        // Only finished work on client projects ends up in front of a client. A running timer has no
+        // duration to specify and a break is not something anybody invoices.
+        $timeEntriesQuery->workTime()
+            ->whereNotNull('end')
+            ->reorder('time_entries.start');
+        (new TimeEntryFilter($timeEntriesQuery))->addExcludeInternalProjects();
+
+        $specification = $hoursSpecificationService->build($timeEntriesQuery, $timezone, $showAmounts);
+
+        $viewFile = file_get_contents(resource_path('views/reports/hours-specification/pdf.blade.php'));
+        if ($viewFile === false) {
+            throw new \LogicException('View file not found');
+        }
+        $html = Blade::render($viewFile, [
+            'organization' => $organization,
+            'specification' => $specification,
+            'currency' => $organization->currency,
+            'start' => $request->getStart()->timezone($timezone),
+            'end' => $request->getEnd()->timezone($timezone),
+            'timezone' => $timezone,
+            'localization' => LocalizationService::forOrganization($organization),
+            'showAmounts' => $showAmounts,
+            'reference' => $request->getReference(),
+            'preparedBy' => $user->name,
+            'generatedAt' => now()->timezone($timezone),
+            'debug' => $debug,
+        ]);
+        $footerViewFile = file_get_contents(resource_path('views/reports/hours-specification/pdf-footer.blade.php'));
+        if ($footerViewFile === false) {
+            throw new \LogicException('View file not found');
+        }
+        $footerHtml = Blade::render($footerViewFile, [
+            'organizationName' => $organization->name,
+        ]);
+        if ($debug) {
+            return response()->json([
+                'html' => $html,
+                'footer_html' => $footerHtml,
+            ]);
+        }
+
+        $folderPath = 'exports';
+        $filename = 'hours-specification-'.now()->format('Y-m-d_H-i-s').'-'.Str::uuid().'.'.ExportFormat::PDF->getFileExtension();
+        $this->renderPdfToPrivateDisk($html, $footerHtml, $folderPath, $filename, [
+            Stream::path(resource_path('pdf/Outfit-VariableFont_wght.ttf'), 'outfit.ttf'),
+        ]);
+
+        return response()->json([
+            'download_url' => Storage::disk(config('filesystems.private'))
+                ->temporaryUrl($folderPath.'/'.$filename, now()->addMinutes(5)),
+        ]);
+    }
+
+    /**
+     * Render a report to PDF with Gotenberg and store it on the private disk.
+     *
+     * @param  array<int, Stream>  $assets  Fonts and scripts the document references by filename.
+     * @param  bool  $waitForReady  Hold the render until the page sets `window.status = 'ready'`, for
+     *                              documents that draw charts after load.
+     *
+     * @throws GotenbergApiErrored
+     * @throws NoOutputFileInResponse
+     */
+    private function renderPdfToPrivateDisk(string $html, string $footerHtml, string $folderPath, string $filename, array $assets, bool $waitForReady = false): void
+    {
+        $client = new Client([
+            'auth' => config('services.gotenberg.basic_auth_username') !== null && config('services.gotenberg.basic_auth_password') !== null ? [
+                config('services.gotenberg.basic_auth_username'),
+                config('services.gotenberg.basic_auth_password'),
+            ] : null,
+        ]);
+        $chromium = Gotenberg::chromium(config('services.gotenberg.url'))
+            ->pdf()
+            ->margins(0.39, 0.78, 0.39, 0.39)
+            ->paperSize('8.27', '11.7') // A4
+            ->footer(Stream::string('footer', $footerHtml))
+            ->assets(...$assets);
+        if ($waitForReady) {
+            $chromium = $chromium->waitForExpression("window.status === 'ready'");
+        }
+        $pdfRequest = $chromium->html(Stream::string('body', $html));
+
+        $tempFolder = TemporaryDirectory::make();
+        $filenameTemp = Gotenberg::save($pdfRequest, $tempFolder->path(), $client);
+        Storage::disk(config('filesystems.private'))
+            ->putFileAs($folderPath, new File($tempFolder->path($filenameTemp)), $filename);
     }
 
     /**
