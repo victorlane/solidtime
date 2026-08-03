@@ -11,6 +11,8 @@ const props = defineProps<{
     current?: boolean;
     href: string;
     subItems?: { title: string; route: string; show: boolean }[];
+    // See NavigationSidebarLink: opens the target in a new tab instead of doing an Inertia visit.
+    external?: boolean;
 }>();
 
 const open = useSessionStorage('nav-collapse-state-' + props.title, true);
@@ -24,7 +26,8 @@ const open = useSessionStorage('nav-collapse-state-' + props.title, true);
             :title
             :icon
             :current
-            :href></NavigationSidebarLink>
+            :href
+            :external></NavigationSidebarLink>
         <CollapsibleRoot v-else v-model:open="open"
             ><CollapsibleTrigger class="w-full group py-0.5">
                 <div

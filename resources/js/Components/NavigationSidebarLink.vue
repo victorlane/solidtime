@@ -1,16 +1,35 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import type { Component } from 'vue';
-defineProps<{
-    title: string;
-    icon?: Component;
-    current?: boolean;
-    href: string;
-}>();
+import { computed, type Component } from 'vue';
+
+const props = withDefaults(
+    defineProps<{
+        title: string;
+        icon?: Component;
+        current?: boolean;
+        href: string;
+        // Renders a plain anchor that opens in a new tab instead of an Inertia visit. Needed for
+        // targets that are not Inertia pages, e.g. the server rendered API documentation.
+        external?: boolean;
+    }>(),
+    {
+        icon: undefined,
+        current: false,
+        external: false,
+    }
+);
+
+const linkComponent = computed<Component | string>(() => (props.external ? 'a' : Link));
+
+const linkAttributes = computed(() =>
+    props.external
+        ? { href: props.href, target: '_blank', rel: 'noopener noreferrer' }
+        : { href: props.href, prefetch: true }
+);
 </script>
 
 <template>
-    <Link :href="href" class="block group" prefetch>
+    <component :is="linkComponent" v-bind="linkAttributes" class="block group">
         <div
             :class="[
                 current
@@ -28,7 +47,7 @@ defineProps<{
                 aria-hidden="true" />
             {{ title }}
         </div>
-    </Link>
+    </component>
 </template>
 
 <style scoped></style>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Extensions\Scramble\ApiExceptionTypeToSchema;
 use App\Extensions\Scramble\PaginatedResourceCollectionTypeToSchema;
+use App\Http\Middleware\IncreaseMemoryLimitForApiDocs;
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 
 return [
@@ -71,9 +72,22 @@ return [
         'Local' => 'https://solidtime.test/api',
     ],
 
+    /*
+     * Middleware applied to the API documentation routes (`/docs/api` and `/docs/api.json`).
+     *
+     * The documentation describes the same API that every organization member can call with their
+     * own token, so it is served to signed in members instead of being restricted to the local
+     * environment. The session based stack below mirrors the authenticated web routes, and
+     * `RestrictedDocsAccess` additionally checks the `viewApiDocs` gate (see AuthServiceProvider),
+     * so guests can never reach the UI or the generated OpenAPI document.
+     */
     'middleware' => [
         'web',
+        'auth:web',
+        'auth.session',
+        'verified',
         RestrictedDocsAccess::class,
+        IncreaseMemoryLimitForApiDocs::class,
     ],
 
     'extensions' => [

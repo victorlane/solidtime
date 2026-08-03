@@ -7,6 +7,7 @@ import {
     CalendarIcon,
     ChartBarIcon,
     ClockIcon,
+    CodeBracketIcon,
     Cog6ToothIcon,
     CreditCardIcon,
     FolderIcon,
@@ -255,6 +256,11 @@ const page = usePage<{
                                 :icon="DocumentTextIcon"
                                 :current="route().current('invoices')"
                                 href="/invoices"></NavigationSidebarItem>
+                            <NavigationSidebarItem
+                                title="API Docs"
+                                :icon="CodeBracketIcon"
+                                href="/docs/api"
+                                external></NavigationSidebarItem>
                         </ul>
                     </nav>
                     <div
