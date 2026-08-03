@@ -1734,8 +1734,11 @@ test.describe('Click-Drag Selection to Create', () => {
     }) => {
         const now = new Date();
         const dayOfWeek = now.getDay();
-        // Need today and tomorrow both visible (skip Saturday with Monday week start)
-        test.skip(dayOfWeek === 6, 'Skipping on Saturday — tomorrow not visible in week view');
+        // Need today and tomorrow both visible (skip Sat/Sun with Monday week start)
+        test.skip(
+            dayOfWeek === 6 || dayOfWeek === 0,
+            'Skipping on weekend — tomorrow not visible in week view'
+        );
 
         await goToCalendar(page);
         await expect(page.locator('.fc')).toBeVisible();
@@ -1879,8 +1882,11 @@ test.describe('Multi-Day Events', () => {
         // Create entry that spans from today 22:00 to tomorrow 02:00
         const now = new Date();
         const dayOfWeek = now.getDay();
-        // If today is Saturday (6), the entry would span to next week and may not be visible
-        test.skip(dayOfWeek === 6, 'Skipping on Saturday — multi-day would span to next week');
+        // If today is Sat (6) or Sun (0), the entry would span to next week and may not be visible
+        test.skip(
+            dayOfWeek === 6 || dayOfWeek === 0,
+            'Skipping on weekend — multi-day would span to next week'
+        );
 
         const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 0, 0);
         const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 2, 0, 0);
@@ -1902,7 +1908,7 @@ test.describe('Multi-Day Events', () => {
 
     test('multi-day event can be edited via click', async ({ page, ctx }) => {
         const now = new Date();
-        test.skip(now.getDay() === 6, 'Skip on Saturday');
+        test.skip(now.getDay() === 6 || now.getDay() === 0, 'Skip on weekend');
 
         const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 0, 0);
         const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 2, 0, 0);
@@ -1928,7 +1934,7 @@ test.describe('Multi-Day Events', () => {
 
     test('multi-day event context menu works', async ({ page, ctx }) => {
         const now = new Date();
-        test.skip(now.getDay() === 6, 'Skip on Saturday');
+        test.skip(now.getDay() === 6 || now.getDay() === 0, 'Skip on weekend');
 
         const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 0, 0);
         const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 2, 0, 0);
@@ -1956,8 +1962,11 @@ test.describe('Multi-Day Events', () => {
     }) => {
         const now = new Date();
         const dayOfWeek = now.getDay();
-        // Need today and tomorrow both visible (skip Saturday)
-        test.skip(dayOfWeek === 6, 'Skipping on Saturday — multi-day would span to next week');
+        // Need today and tomorrow both visible (skip Sat/Sun with Monday week start)
+        test.skip(
+            dayOfWeek === 6 || dayOfWeek === 0,
+            'Skipping on weekend — multi-day would span to next week'
+        );
 
         // Create entry: today 22:00 → tomorrow 02:00 (4 hours, spanning 2 days)
         const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 0, 0);
@@ -2026,8 +2035,11 @@ test.describe('Multi-Day Events', () => {
     }) => {
         const now = new Date();
         const dayOfWeek = now.getDay();
-        // Need today and tomorrow both visible (skip Saturday)
-        test.skip(dayOfWeek === 6, 'Skipping on Saturday — multi-day would span to next week');
+        // Need today and tomorrow both visible (skip Sat/Sun with Monday week start)
+        test.skip(
+            dayOfWeek === 6 || dayOfWeek === 0,
+            'Skipping on weekend — multi-day would span to next week'
+        );
 
         // Create entry: today 22:00 → tomorrow 02:00 (4 hours, spanning 2 days)
         const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 0, 0);

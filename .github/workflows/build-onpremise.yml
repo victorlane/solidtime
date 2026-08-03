@@ -60,8 +60,8 @@ jobs:
               version=$(echo "${{ steps.previoustag.outputs.tag }}" | cut -c 2-)
               echo "app_version=${version}" >> "$GITHUB_OUTPUT"
             else
-              echo "ERROR: No previous tag found";
-              exit 1;
+              echo "WARNING: No previous tag found, falling back to 0.0.0";
+              echo "app_version=0.0.0" >> "$GITHUB_OUTPUT"
             fi
           else
             version=$(echo "${{ github.ref }}" | cut -c 12-)
