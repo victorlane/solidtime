@@ -7,8 +7,15 @@ namespace Tests\Unit\Middleware;
 use App\Http\Middleware\IncreaseMemoryLimitForApiDocs;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
+/**
+ * Runs in separate processes: `ini_set('memory_limit', '128M')` in the low-limit test below
+ * fails if the current process already uses more memory than that, which happens whenever
+ * enough other tests have already run in the same PHPUnit worker before this one.
+ */
 #[CoversClass(IncreaseMemoryLimitForApiDocs::class)]
+#[RunTestsInSeparateProcesses]
 class IncreaseMemoryLimitForApiDocsMiddlewareTest extends MiddlewareTestAbstract
 {
     private string $memoryLimitBeforeTest;
