@@ -93,6 +93,7 @@ export interface User {
     two_factor_confirmed_at: string | null;
     timezone: string;
     week_start: string;
+    hidden_nav_items: string[];
     // mutators
     profile_photo_url: string;
     // relations

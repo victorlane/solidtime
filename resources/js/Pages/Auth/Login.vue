@@ -7,10 +7,10 @@ import { Field, FieldLabel, FieldError } from '@/packages/ui/src/field';
 import PrimaryButton from '@/packages/ui/src/Buttons/PrimaryButton.vue';
 import TextInput from '@/packages/ui/src/Input/TextInput.vue';
 
-defineProps({
-    canResetPassword: Boolean,
-    status: String,
-});
+defineProps<{
+    canResetPassword?: boolean;
+    status?: string;
+}>();
 
 const form = useForm({
     email: '',
@@ -30,6 +30,11 @@ const submit = () => {
 const page = usePage<{
     flash: {
         message: string;
+    };
+    oidc: {
+        enabled: boolean;
+        label: string;
+        url: string | null;
     };
 }>();
 </script>
@@ -59,6 +64,21 @@ const page = usePage<{
             v-if="page.props.flash?.message"
             class="bg-red-400 text-black text-center w-full px-3 py-1 mb-4 rounded-lg">
             {{ page.props.flash?.message }}
+        </div>
+
+        <div v-if="page.props.oidc?.enabled && page.props.oidc.url" class="mb-6">
+            <a
+                :href="page.props.oidc.url"
+                class="flex w-full items-center justify-center h-9 px-3 text-sm bg-button-secondary-background border border-button-secondary-border hover:bg-button-secondary-background-hover shadow-sm transition text-text-primary rounded-lg font-medium focus-visible:outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring">
+                {{ page.props.oidc.label }}
+            </a>
+
+            <div
+                class="mt-6 flex items-center gap-3 text-xs uppercase tracking-wide text-text-secondary">
+                <div class="h-px flex-1 bg-card-background-separator"></div>
+                <span>or</span>
+                <div class="h-px flex-1 bg-card-background-separator"></div>
+            </div>
         </div>
 
         <form @submit.prevent="submit">

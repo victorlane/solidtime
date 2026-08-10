@@ -27,12 +27,13 @@ class TimeEntryFactory extends Factory
      */
     public function definition(): array
     {
-        $start = $this->faker->dateTimeBetween('-1 year', '-1 hour');
+        $start = Carbon::instance($this->faker->dateTimeBetween('-1 year', '-1 hour'));
+        $end = $start->copy()->addSeconds($this->faker->numberBetween(60, 8 * 3600))->min(Carbon::now());
 
         return [
             'description' => $this->faker->sentence(),
             'start' => $start,
-            'end' => $this->faker->dateTimeBetween($start, 'now'),
+            'end' => $end,
             'billable' => $this->faker->boolean(),
             'type' => TimeEntryType::Work,
             'is_imported' => false,

@@ -48,11 +48,20 @@ class HandleInertiaRequests extends Middleware
 
         $currentOrganization = $request->user()?->currentOrganization;
 
+        $oidcEnabled = (bool) config('services.oidc.enabled')
+            && filled(config('services.oidc.issuer'))
+            && filled(config('services.oidc.client_id'));
+
         return array_merge(parent::share($request), [
             'has_billing_extension' => $hasBilling,
             'silence_premium' => config('app.silence_premium'),
             'has_invoicing_extension' => $hasInvoicing,
             'has_services_extension' => $hasServices,
+            'oidc' => [
+                'enabled' => $oidcEnabled,
+                'label' => (string) config('services.oidc.button_label'),
+                'url' => $oidcEnabled ? route('oidc.redirect') : null,
+            ],
             'billing' => $currentOrganization !== null ? [
                 'has_subscription' => $billing->hasSubscription($currentOrganization),
                 'has_trial' => $billing->hasTrial($currentOrganization),

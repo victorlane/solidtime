@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\HomeController;
+use App\Http\Controllers\Web\OidcController;
 use App\Http\Controllers\Web\OrganizationController;
 use App\Http\Controllers\Web\OrganizationInvitationController;
 use App\Http\Controllers\Web\OtherBrowserSessionsController;
@@ -30,6 +31,11 @@ Route::get('/', [HomeController::class, 'index']);
 Route::get('/shared-report', function () {
     return Inertia::render('SharedReport');
 })->name('shared-report');
+
+Route::middleware('guest')->group(function (): void {
+    Route::get('/auth/oidc/redirect', [OidcController::class, 'redirect'])->name('oidc.redirect');
+    Route::get('/auth/oidc/callback', [OidcController::class, 'callback'])->name('oidc.callback');
+});
 
 Route::middleware([
     'auth:web',
@@ -61,6 +67,10 @@ Route::middleware([
     Route::get('/reporting/shared', function () {
         return Inertia::render('ReportingShared');
     })->name('reporting.shared');
+
+    Route::get('/reporting/business', function () {
+        return Inertia::render('ReportingBusiness');
+    })->name('reporting.business');
 
     Route::get('/projects', function () {
         return Inertia::render('Projects');

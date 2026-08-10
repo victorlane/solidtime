@@ -107,17 +107,20 @@ export function formatHumanReadableDuration(
     const hours = Math.floor(dayJsDuration.asHours());
     const minutes = dayJsDuration.minutes();
     const seconds = dayJsDuration.seconds();
+    const isSubMinute = duration > 0 && duration < 60;
 
     switch (intervalFormat) {
         case 'decimal':
             return formatNumber(dayJsDuration.asHours(), numberFormat) + ' h';
         case 'hours-minutes':
+            if (isSubMinute) return '<1min';
             return `${hours}h ${minutes.toString().padStart(2, '0')}min`;
         case 'hours-minutes-colon-separated':
             return `${hours}:${minutes.toString().padStart(2, '0')}`;
         case 'hours-minutes-seconds-colon-separated':
             return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         default:
+            if (isSubMinute) return '<1min';
             return `${hours}h ${minutes.toString().padStart(2, '0')}min`;
     }
 }
@@ -148,6 +151,55 @@ export function formatDuration(duration: number): string {
     const minutes = dayJsDuration.minutes();
     const seconds = dayJsDuration.seconds();
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * True when stopping `entry` right now would produce an accidental blank, near-zero
+ * duration entry (no description/project/task/tags, started and stopped within
+ * `maxSeconds`) that shouldn't be persisted at all.
+ */
+export function isDiscardableEmptyEntry(
+    entry: {
+        description: string | null;
+        project_id: string | null;
+        task_id: string | null;
+        tags: string[];
+        start: string;
+    },
+    end: string,
+    maxSeconds = 2
+): boolean {
+    const isEmpty =
+        !entry.description?.trim() &&
+        entry.project_id === null &&
+        entry.task_id === null &&
+        entry.tags.length === 0;
+    if (!isEmpty) {
+        return false;
+    }
+    return getDayJsInstance()(end).diff(getDayJsInstance()(entry.start), 'second') <= maxSeconds;
+}
+
+/**
+ * Build a duplicate of a finished time entry shifted to start right after the
+ * original ends, preserving its duration. Prevents "Duplicate" from stacking a
+ * second entry on the exact same interval, which would silently double the day's
+ * tracked total in reports. A running entry (no end yet) is copied unshifted since
+ * there's nothing to anchor the shift to.
+ */
+export function shiftDuplicateInterval<T extends { start: string; end: string | null }>(
+    entry: T
+): T {
+    if (entry.end === null) {
+        return { ...entry };
+    }
+    const durationSeconds = getDayJsInstance()(entry.end).diff(
+        getDayJsInstance()(entry.start),
+        'second'
+    );
+    const newStart = entry.end;
+    const newEnd = getDayJsInstance()(entry.end).add(durationSeconds, 'second').format();
+    return { ...entry, start: newStart, end: newEnd };
 }
 
 export function calculateDifference(start: string, end: string | null) {

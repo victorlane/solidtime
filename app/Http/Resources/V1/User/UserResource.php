@@ -36,6 +36,8 @@ class UserResource extends BaseResource
             'timezone' => $this->resource->timezone,
             /** @var Weekday $week_start Starting day of the week */
             'week_start' => $this->resource->week_start->value,
+            /** @var array<string> $hidden_nav_items Navigation items the user has hidden for themselves */
+            'hidden_nav_items' => $this->resource->hidden_nav_items,
         ];
     }
 }

@@ -12,6 +12,8 @@ use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Rules\MaxTimeEntryDuration;
+use App\Rules\RetainerCapNotExceeded;
 use App\Service\PermissionStore;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Builder;
@@ -96,6 +98,8 @@ class TimeEntryUpdateRequest extends BaseFormRequest
                 'nullable',
                 'date_format:Y-m-d\TH:i:s\Z',
                 'after_or_equal:start',
+                new MaxTimeEntryDuration($this->input('start') ?? $timeEntry?->start?->toIso8601ZuluString()),
+                new RetainerCapNotExceeded($timeEntry),
             ],
             // Whether time entry is billable
             'billable' => [

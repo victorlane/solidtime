@@ -124,6 +124,10 @@ class UserController extends Controller
             $user->week_start = $request->getWeekStart();
         }
 
+        if ($request->getHiddenNavItems() !== null) {
+            $user->hidden_nav_items = $request->getHiddenNavItems();
+        }
+
         $user->save();
 
         if ($emailToVerify !== null) {

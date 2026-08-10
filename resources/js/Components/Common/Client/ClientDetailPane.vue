@@ -13,10 +13,20 @@ import TextInput from '@/packages/ui/src/Input/TextInput.vue';
 import PrimaryButton from '@/packages/ui/src/Buttons/PrimaryButton.vue';
 import SecondaryButton from '@/packages/ui/src/Buttons/SecondaryButton.vue';
 import ClientEditModal from '@/Components/Common/Client/ClientEditModal.vue';
+import RetainerStatusCard from '@/Components/Common/Retainer/RetainerStatusCard.vue';
+import RetainerFormModal from '@/Components/Common/Retainer/RetainerFormModal.vue';
 import { useClientsStore } from '@/utils/useClients';
+import { useRetainersStore } from '@/utils/useRetainers';
 import { useProjectsQuery } from '@/utils/useProjectsQuery';
-import { canUpdateClients, canDeleteClients } from '@/utils/permissions';
+import { useRetainersForClientQuery } from '@/utils/useRetainersQuery';
+import {
+    canUpdateClients,
+    canDeleteClients,
+    canViewRetainers,
+    canCreateRetainers,
+} from '@/utils/permissions';
 import { formatDate } from '@/packages/ui/src/utils/time';
+import type { Retainer } from '@/packages/api/src';
 
 const props = defineProps<{
     client: Client;
@@ -39,6 +49,26 @@ const formattedCreatedAt = computed(() => {
 
 const showEditModal = ref(false);
 const saving = ref(false);
+
+const clientId = computed(() => props.client.id);
+const { retainers, activeRetainer } = useRetainersForClientQuery(clientId);
+
+const showRetainerModal = ref(false);
+const editingRetainer = ref<Retainer | null>(null);
+
+function createRetainer() {
+    editingRetainer.value = null;
+    showRetainerModal.value = true;
+}
+
+function editRetainer(retainer: Retainer) {
+    editingRetainer.value = retainer;
+    showRetainerModal.value = true;
+}
+
+function deleteRetainer(retainer: Retainer) {
+    useRetainersStore().deleteRetainer(retainer.id);
+}
 
 interface MetadataEntry {
     key: string;
@@ -170,6 +200,37 @@ function deleteClient() {
                 >Delete</SecondaryButton
             >
         </div>
+
+        <div
+            v-if="canViewRetainers()"
+            class="px-4 py-4 border-b border-default-background-separator"
+            data-testid="client_detail_retainer_section">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-text-primary font-semibold text-sm">Retainer</h3>
+                <SecondaryButton
+                    v-if="canCreateRetainers() && !activeRetainer"
+                    :icon="PlusIcon"
+                    data-testid="client_detail_retainer_create"
+                    @click="createRetainer"
+                    >New retainer</SecondaryButton
+                >
+            </div>
+            <RetainerStatusCard
+                v-if="activeRetainer"
+                :retainer="activeRetainer"
+                @edit="editRetainer(activeRetainer)"
+                @delete="deleteRetainer(activeRetainer)"></RetainerStatusCard>
+            <p v-else class="text-text-secondary text-sm">No active retainer for this client.</p>
+            <p
+                v-if="retainers.length > (activeRetainer ? 1 : 0)"
+                class="text-text-tertiary text-xs mt-2">
+                {{ retainers.length - (activeRetainer ? 1 : 0) }} other retainer(s) on record.
+            </p>
+        </div>
+        <RetainerFormModal
+            v-model:show="showRetainerModal"
+            :client-id="client.id"
+            :retainer="editingRetainer"></RetainerFormModal>
 
         <div class="px-4 py-4 space-y-3">
             <div class="flex items-center justify-between">

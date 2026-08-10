@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\V1\User;
 
+use App\Enums\HideableNavItem;
 use App\Enums\Weekday;
 use App\Http\Requests\V1\BaseFormRequest;
 use App\Models\User;
 use App\Rules\Base64ImageRule;
+use App\Service\TimezoneService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -25,6 +27,20 @@ class UserUpdateRequest extends BaseFormRequest
             $this->merge([
                 'email' => Str::lower((string) $this->input('email')),
             ]);
+        }
+
+        // Browsers can report legacy/renamed IANA timezone identifiers (e.g. "Europe/Kiev").
+        // Normalize those to their current canonical name before the `timezone:all` rule
+        // runs, otherwise a legacy zone would fail validation forever.
+        if ($this->has('timezone') && is_string($this->input('timezone'))) {
+            $service = app(TimezoneService::class);
+            $timezone = (string) $this->input('timezone');
+            if (! $service->isValid($timezone)) {
+                $mapped = $service->mapLegacyTimezone($timezone);
+                if ($mapped !== null) {
+                    $this->merge(['timezone' => $mapped]);
+                }
+            }
         }
     }
 
@@ -58,6 +74,12 @@ class UserUpdateRequest extends BaseFormRequest
             'week_start' => [
                 Rule::enum(Weekday::class),
             ],
+            'hidden_nav_items' => [
+                'array',
+            ],
+            'hidden_nav_items.*' => [
+                Rule::enum(HideableNavItem::class),
+            ],
         ];
     }
 
@@ -79,6 +101,22 @@ class UserUpdateRequest extends BaseFormRequest
     public function getWeekStart(): ?Weekday
     {
         return $this->has('week_start') ? Weekday::from($this->input('week_start')) : null;
+    }
+
+    /**
+     * Null means the field was not sent (leave the user's stored preference untouched);
+     * an empty array is a valid value meaning "everything visible".
+     *
+     * @return array<int, string>|null
+     */
+    public function getHiddenNavItems(): ?array
+    {
+        if (! $this->has('hidden_nav_items')) {
+            return null;
+        }
+        $value = $this->input('hidden_nav_items');
+
+        return is_array($value) ? array_values(array_map('strval', $value)) : [];
     }
 
     public function hasPhotoKey(): bool

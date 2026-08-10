@@ -5,10 +5,11 @@ import { computed } from 'vue';
 import { TabBar, TabBarItem } from '@/packages/ui/src';
 
 const props = defineProps<{
-    active: 'reporting' | 'detailed' | 'shared';
+    active: 'reporting' | 'detailed' | 'shared' | 'business';
 }>();
 
 const showSharedReports = computed(() => canViewReport());
+const showBusinessOverview = computed(() => canViewReport());
 
 const tabs = computed(() => {
     const items = [
@@ -20,6 +21,13 @@ const tabs = computed(() => {
             value: 'shared',
             label: 'Shared',
             href: route('reporting.shared'),
+        });
+    }
+    if (showBusinessOverview.value) {
+        items.push({
+            value: 'business',
+            label: 'Business',
+            href: route('reporting.business'),
         });
     }
     return items;

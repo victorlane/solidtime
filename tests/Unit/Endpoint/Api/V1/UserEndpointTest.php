@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Endpoint\Api\V1;
 
+use App\Enums\HideableNavItem;
 use App\Enums\Role;
 use App\Enums\Weekday;
 use App\Mail\VerifyUpdatedEmailMail;
@@ -189,6 +190,91 @@ class UserEndpointTest extends ApiEndpointTestAbstract
         $this->assertSame('Original Name', $user->name);
         $this->assertSame('Europe/Vienna', $user->timezone);
         $this->assertSame(Weekday::Monday, $user->week_start);
+    }
+
+    public function test_update_can_set_hidden_nav_items(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.users.update', $data->user->getKey()), [
+            'hidden_nav_items' => [
+                HideableNavItem::Members->value,
+                HideableNavItem::Tags->value,
+            ],
+        ]);
+
+        // Assert
+        $response->assertSuccessful();
+        $response->assertJson([
+            'data' => [
+                'hidden_nav_items' => [
+                    HideableNavItem::Members->value,
+                    HideableNavItem::Tags->value,
+                ],
+            ],
+        ]);
+        $user = $data->user->fresh();
+        $this->assertSame([
+            HideableNavItem::Members->value,
+            HideableNavItem::Tags->value,
+        ], $user->hidden_nav_items);
+    }
+
+    public function test_update_can_clear_hidden_nav_items_with_empty_array(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission();
+        $data->user->hidden_nav_items = [HideableNavItem::Members->value];
+        $data->user->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.users.update', $data->user->getKey()), [
+            'hidden_nav_items' => [],
+        ]);
+
+        // Assert
+        $response->assertSuccessful();
+        $user = $data->user->fresh();
+        $this->assertSame([], $user->hidden_nav_items);
+    }
+
+    public function test_update_does_not_change_hidden_nav_items_if_not_sent(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission();
+        $data->user->hidden_nav_items = [HideableNavItem::Members->value];
+        $data->user->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.users.update', $data->user->getKey()), [
+            'name' => 'Someone Else',
+        ]);
+
+        // Assert
+        $response->assertSuccessful();
+        $user = $data->user->fresh();
+        $this->assertSame([HideableNavItem::Members->value], $user->hidden_nav_items);
+    }
+
+    public function test_update_fails_if_hidden_nav_items_contains_unknown_value(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.users.update', $data->user->getKey()), [
+            'hidden_nav_items' => ['not-a-real-nav-item'],
+        ]);
+
+        // Assert
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['hidden_nav_items.0']);
     }
 
     public function test_update_email_stores_pending_email_and_sends_verification_email(): void
@@ -485,6 +571,24 @@ class UserEndpointTest extends ApiEndpointTestAbstract
         // Assert
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['timezone']);
+    }
+
+    public function test_update_normalizes_legacy_timezone_to_its_canonical_name(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.users.update', $data->user->getKey()), [
+            'timezone' => 'Europe/Kiev',
+        ]);
+
+        // Assert
+        $response->assertSuccessful();
+        $response->assertJsonPath('data.timezone', 'Europe/Kyiv');
+        $user = User::query()->findOrFail($data->user->getKey());
+        $this->assertSame('Europe/Kyiv', $user->timezone);
     }
 
     public function test_update_fails_if_week_start_is_invalid(): void

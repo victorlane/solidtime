@@ -24,10 +24,14 @@ import { getOrganizationCurrencyString } from '@/utils/money';
 import { useQuery } from '@tanstack/vue-query';
 import { getCurrentOrganizationId } from '@/utils/useUser';
 import { api, type Organization } from '@/packages/api/src';
+import { useNavVisibility } from '@/utils/navVisibility';
 
 use([CanvasRenderer, BarChart, TitleComponent, GridComponent, TooltipComponent, LegendComponent]);
 
 provide(THEME_KEY, 'dark');
+
+const { isVisible } = useNavVisibility();
+const billableWidgetsEnabled = computed(() => isVisible('dashboard_billable_widgets'));
 
 const weekdays = computed(() => {
     const daysOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -260,6 +264,7 @@ const option = computed(() => {
                         : '--'
                 " />
             <StatCard
+                v-if="billableWidgetsEnabled"
                 title="Billable Time"
                 :value="
                     totalWeeklyBillableTime
@@ -271,6 +276,7 @@ const option = computed(() => {
                         : '--'
                 " />
             <StatCard
+                v-if="billableWidgetsEnabled"
                 title="Billable Amount"
                 :value="
                     totalWeeklyBillableAmount
