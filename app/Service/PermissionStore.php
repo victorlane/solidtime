@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Enums\Role;
 use App\Models\Organization;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
+use App\Service\Auth\Actor;
+use App\Service\Auth\ActorResolver;
+use App\Service\Auth\UserActor;
 
 class PermissionStore
 {
+    public function __construct(
+        private readonly ActorResolver $actorResolver = new ActorResolver,
+    ) {}
+
     /**
      * @var array<string, array{name: string, permissions: array<string>, description: string}>
      */
@@ -292,76 +297,44 @@ class PermissionStore
 
     public function has(Organization $organization, string $permission): bool
     {
-        /** @var User|null $user */
-        $user = Auth::user();
-        if ($user === null) {
-            return false;
-        }
-
-        return $this->userHas($organization, $user, $permission);
+        return in_array($permission, $this->getPermissions($organization), true);
     }
 
     public function userHas(Organization $organization, User $user, string $permission): bool
     {
-        if (! isset($this->permissionCache[$user->getKey().'|'.$organization->getKey()])) {
-            if (! $user->isMemberOfOrganization($organization)) {
-                return false;
-            }
-
-            $permissions = $this->getPermissionsByUser($organization, $user);
-            $this->permissionCache[$user->getKey().'|'.$organization->getKey()] = $permissions;
-        } else {
-            $permissions = $this->permissionCache[$user->getKey().'|'.$organization->getKey()];
-        }
-
-        return in_array($permission, $permissions, true);
+        return in_array($permission, $this->permissionsForActor(new UserActor($user), $organization), true);
     }
 
     /**
+     * The permissions an actor has within an organization, resolved once per actor and organization.
+     *
      * @return array<string>
      */
-    private function getPermissionsByUser(Organization $organization, User $user): array
+    private function permissionsForActor(Actor $actor, Organization $organization): array
     {
-        if (! $user->isMemberOfOrganization($organization)) {
-            return [];
+        $key = $actor->cacheKey().'|'.$organization->getKey();
+
+        if (! isset($this->permissionCache[$key])) {
+            $this->permissionCache[$key] = $actor->belongsTo($organization)
+                ? $actor->permissionsFor($organization)
+                : [];
         }
 
-        $role = $organization->users
-            ->where('id', $user->getKey())
-            ->first()
-            ?->membership
-            ?->role;
-
-        if ($role === null) {
-            return [];
-        }
-
-        $permissions = self::permissionsForRole($role);
-
-        // If the organization allows employees to manage tasks and the user is an employee,
-        // add the task management permissions for accessible projects
-        if ($role === Role::Employee->value && $organization->employees_can_manage_tasks) {
-            $permissions = array_merge($permissions, [
-                'tasks:create',
-                'tasks:update',
-                'tasks:delete',
-            ]);
-        }
-
-        return $permissions;
+        return $this->permissionCache[$key];
     }
 
     /**
+     * The permissions whoever is acting on the current request has within an organization.
+     *
      * @return array<string>
      */
     public function getPermissions(Organization $organization): array
     {
-        /** @var User|null $user */
-        $user = Auth::user();
-        if ($user === null) {
+        $actor = $this->actorResolver->resolve();
+        if ($actor === null) {
             return [];
         }
 
-        return $this->getPermissionsByUser($organization, $user);
+        return $this->permissionsForActor($actor, $organization);
     }
 }

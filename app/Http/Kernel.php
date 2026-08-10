@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\AuthenticateApi;
 use App\Http\Middleware\CheckOrganizationBlocked;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\EnsureEmailIsVerified;
@@ -96,6 +97,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareAliases = [
         'auth' => Authenticate::class,
+        'auth.api' => AuthenticateApi::class,
         'auth.basic' => AuthenticateWithBasicAuth::class,
         'auth.session' => AuthenticateSession::class,
         'cache.headers' => SetCacheHeaders::class,
