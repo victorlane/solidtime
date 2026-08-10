@@ -64,7 +64,7 @@ class InvitationController extends Controller
         $email = $request->getEmail();
         $role = $request->getRole();
 
-        $invitationService->inviteUser($organization, $email, $role, $this->user());
+        $invitationService->inviteUser($organization, $email, $role, $this->actingUser());
 
         return response()->json(null, 204);
     }

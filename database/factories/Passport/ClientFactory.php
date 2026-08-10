@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories\Passport;
 
+use App\Enums\Role;
+use App\Models\Organization;
 use App\Models\Passport\Client;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -57,6 +59,20 @@ class ClientFactory extends BaseClientFactory
         return $this->state(function (array $attributes) {
             return [
                 'grant_types' => ['personal_access'],
+            ];
+        });
+    }
+
+    public function organizationApiKey(Organization $organization, Role $role = Role::Admin): self
+    {
+        return $this->state(function (array $attributes) use ($organization, $role): array {
+            return [
+                'name' => 'Organization API Key',
+                'grant_types' => ['client_credentials'],
+                'redirect_uris' => [],
+                'owner_id' => $organization->getKey(),
+                'owner_type' => (new Organization)->getMorphClass(),
+                'role' => $role,
             ];
         });
     }

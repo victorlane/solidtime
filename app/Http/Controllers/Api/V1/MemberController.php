@@ -196,7 +196,7 @@ class MemberController extends Controller
             throw new ThisPlaceholderCanNotBeInvitedUseTheMergeToolInsteadException;
         }
 
-        $invitationService->inviteUser($organization, $user->email, Role::Employee, $this->user());
+        $invitationService->inviteUser($organization, $user->email, Role::Employee, $this->actingUser());
 
         return response()->json(null, 204);
     }

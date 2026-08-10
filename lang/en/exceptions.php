@@ -12,6 +12,7 @@ use App\Exceptions\Api\InactiveUserCanNotBeUsedApiException;
 use App\Exceptions\Api\InvitationForTheEmailAlreadyExistsApiException;
 use App\Exceptions\Api\OnlyOwnerCanChangeOwnership;
 use App\Exceptions\Api\OnlyPlaceholdersCanBeMergedIntoAnotherMember;
+use App\Exceptions\Api\OrganizationApiKeyCanNotActOnBehalfOfAUser;
 use App\Exceptions\Api\OrganizationHasNoSubscriptionButMultipleMembersException;
 use App\Exceptions\Api\OrganizationNeedsAtLeastOneOwner;
 use App\Exceptions\Api\OverlappingTimeEntryApiException;
@@ -51,6 +52,7 @@ return [
         InvitationForTheEmailAlreadyExistsApiException::KEY => 'The email has already been invited to the organization. Please wait for the user to accept the invitation or resend the invitation email.',
         OverlappingTimeEntryApiException::KEY => 'Overlapping time entries are not allowed.',
         UserResendEmailVerificationNoPendingEmailApiException::KEY => 'Resend email not possible, no pending email.',
+        OrganizationApiKeyCanNotActOnBehalfOfAUser::KEY => 'This action records who performed it and can not be done with an organization API key. Use a personal API token instead.',
     ],
     'unknown_error_in_admin_panel' => 'An unknown error occurred. Please check the logs.',
 ];

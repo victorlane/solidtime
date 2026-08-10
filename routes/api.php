@@ -38,7 +38,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 Route::prefix('v1')->name('v1.')->group(static function (): void {
     Route::middleware([
-        'auth:api',
+        'auth.api',
         'verified',
         'update-api-token-last-used-at',
     ])->group(static function (): void {
