@@ -559,7 +559,7 @@ test('test that theme can be changed to dark and light', async ({ page }) => {
     await goToProfilePage(page);
 
     // The theme select is a Reka UI combobox (button), not a native <select>
-    const themeSelect = page.locator('button[role="combobox"]');
+    const themeSelect = page.getByRole('combobox', { name: 'Theme' });
 
     // Change theme to dark
     await themeSelect.click();
@@ -585,7 +585,7 @@ test('test that theme can be changed to dark and light', async ({ page }) => {
     await expect(page.locator('html')).toHaveClass(/light/);
 
     // Reset to system
-    await page.locator('button[role="combobox"]').click();
+    await themeSelect.click();
     await page.getByRole('option', { name: 'System' }).click();
     await expect(page.getByText('System default:')).toBeVisible();
 });
