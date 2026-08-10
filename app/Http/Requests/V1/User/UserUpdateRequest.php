@@ -109,6 +109,9 @@ class UserUpdateRequest extends BaseFormRequest
      *
      * @return array<int, string>|null
      */
+    /**
+     * @return list<string>|null
+     */
     public function getHiddenNavItems(): ?array
     {
         if (! $this->has('hidden_nav_items')) {

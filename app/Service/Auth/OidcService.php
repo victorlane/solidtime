@@ -137,12 +137,22 @@ class OidcService
             ->setJwksProviderBuilder(new JwksProviderBuilder)
             ->build(rtrim((string) config('services.oidc.issuer'), '/').'/.well-known/openid-configuration');
 
+        $clientId = (string) config('services.oidc.client_id');
+        if ($clientId === '') {
+            throw new RuntimeException('OIDC client_id is not configured.');
+        }
+
+        $redirectUri = $this->redirectUri();
+        if ($redirectUri === '') {
+            throw new RuntimeException('OIDC redirect URI could not be resolved.');
+        }
+
         $clientSecret = config('services.oidc.client_secret');
         $authMethod = config('services.oidc.token_endpoint_auth_method')
             ?: (filled($clientSecret) ? 'client_secret_basic' : 'none');
         $clientMetadata = [
-            'client_id' => (string) config('services.oidc.client_id'),
-            'redirect_uris' => [$this->redirectUri()],
+            'client_id' => $clientId,
+            'redirect_uris' => [$redirectUri],
             'response_types' => ['code'],
             'token_endpoint_auth_method' => $authMethod,
         ];
@@ -159,18 +169,22 @@ class OidcService
 
     private function authorizationService(): AuthorizationService
     {
-        return (new AuthorizationServiceBuilder)
-            ->setHttpClient($this->httpClient())
-            ->setRequestFactory($this->httpFactory())
-            ->build();
+        // The setters are declared on the abstract builder and return `self`, so chaining
+        // loses the concrete type that actually carries build().
+        $builder = new AuthorizationServiceBuilder;
+        $builder->setHttpClient($this->httpClient());
+        $builder->setRequestFactory($this->httpFactory());
+
+        return $builder->build();
     }
 
     private function userInfoService(): UserInfoService
     {
-        return (new UserInfoServiceBuilder)
-            ->setHttpClient($this->httpClient())
-            ->setRequestFactory($this->httpFactory())
-            ->build();
+        $builder = new UserInfoServiceBuilder;
+        $builder->setHttpClient($this->httpClient());
+        $builder->setRequestFactory($this->httpFactory());
+
+        return $builder->build();
     }
 
     private function httpClient(): PsrHttpClient
@@ -198,20 +212,10 @@ class OidcService
             && $client->getIssuer()->getMetadata()->getUserinfoEndpoint() !== null
         ) {
             $userInfo = $this->userInfoService()->getUserInfo($client, $tokenSet);
-            if (is_array($userInfo)) {
-                // Guard against a userinfo endpoint returning claims for a different subject
-                // than the one that was just verified in the ID token.
-                if (
-                    isset($claims['sub'], $userInfo['sub'])
-                    && is_string($claims['sub'])
-                    && is_string($userInfo['sub'])
-                    && ! hash_equals($claims['sub'], $userInfo['sub'])
-                ) {
-                    throw new RuntimeException('OIDC ID token and userinfo subjects do not match.');
-                }
 
-                $claims = array_merge($claims, $userInfo);
-            }
+            $this->assertSubjectsMatch($claims, $userInfo);
+
+            $claims = array_merge($claims, $userInfo);
         }
 
         if (! isset($claims['sub']) || ! is_string($claims['sub']) || $claims['sub'] === '') {
@@ -223,6 +227,28 @@ class OidcService
         }
 
         return $claims;
+    }
+
+    /**
+     * Reject a userinfo response describing a different subject than the ID token just verified.
+     *
+     * Both arrays are taken as plain claim maps on purpose. The library annotates its claims as
+     * `array{}&array{...}`, which static analysis reads as the empty shape, and that would make
+     * every lookup below look impossible even though the claims are populated at runtime.
+     *
+     * @param  array<string, mixed>  $claims
+     * @param  array<string, mixed>  $userInfo
+     */
+    private function assertSubjectsMatch(array $claims, array $userInfo): void
+    {
+        if (
+            isset($claims['sub'], $userInfo['sub'])
+            && is_string($claims['sub'])
+            && is_string($userInfo['sub'])
+            && ! hash_equals($claims['sub'], $userInfo['sub'])
+        ) {
+            throw new RuntimeException('OIDC ID token and userinfo subjects do not match.');
+        }
     }
 
     private function pullAuthSession(Request $request): AuthSessionInterface
