@@ -21,6 +21,7 @@ use Laravel\Passport\Token as PassportToken;
  * @property bool $revoked
  * @property Carbon|null $reminder_sent_at
  * @property Carbon|null $expired_info_sent_at
+ * @property Carbon|null $last_used_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $expires_at
@@ -71,6 +72,7 @@ class Token extends PassportToken
             'expires_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
             'expired_info_sent_at' => 'datetime',
+            'last_used_at' => 'datetime',
         ];
     }
 

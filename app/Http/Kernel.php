@@ -16,6 +16,7 @@ use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\ShareInertiaData;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
+use App\Http\Middleware\UpdateApiTokenLastUsedAt;
 use App\Http\Middleware\ValidateSignature;
 use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
@@ -104,5 +105,6 @@ class Kernel extends HttpKernel
         'throttle' => ThrottleRequests::class,
         'verified' => EnsureEmailIsVerified::class,
         'check-organization-blocked' => CheckOrganizationBlocked::class,
+        'update-api-token-last-used-at' => UpdateApiTokenLastUsedAt::class,
     ];
 }

@@ -6359,7 +6359,14 @@
                             "string",
                             "null"
                         ],
-                        "description": "At what time the API token expires (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z)"
+                        "description": "At what time the API token expires, null means that the API token never expires (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z)"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "When the API token was last used to authenticate a request, null means that the API token was never used (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z)"
                     }
                 },
                 "required": [
@@ -6368,7 +6375,8 @@
                     "revoked",
                     "scopes",
                     "created_at",
-                    "expires_at"
+                    "expires_at",
+                    "last_used_at"
                 ],
                 "title": "ApiTokenResource"
             },
@@ -6379,6 +6387,13 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 255
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Point in time at which the API token expires, null means that the API token never expires. If the parameter is omitted, the token expires after the default lifetime of one year. (Format: \"Y-m-d\\TH:i:s\\Z\", UTC timezone, Example: \"2000-02-22T14:58:59Z\")"
                     }
                 },
                 "required": [
@@ -6417,7 +6432,14 @@
                             "string",
                             "null"
                         ],
-                        "description": "At what time the API token expires (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z)"
+                        "description": "At what time the API token expires, null means that the API token never expires (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z)"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "When the API token was last used to authenticate a request, null means that the API token was never used (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z)"
                     },
                     "access_token": {
                         "type": "string",
@@ -6431,6 +6453,7 @@
                     "scopes",
                     "created_at",
                     "expires_at",
+                    "last_used_at",
                     "access_token"
                 ],
                 "title": "ApiTokenWithAccessTokenResource"

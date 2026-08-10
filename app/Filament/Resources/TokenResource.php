@@ -56,6 +56,9 @@ class TokenResource extends Resource
                 Forms\Components\DateTimePicker::make('expires_at')
                     ->label('Expires At')
                     ->disabled(),
+                Forms\Components\DateTimePicker::make('last_used_at')
+                    ->label('Last Used At')
+                    ->disabled(),
                 Forms\Components\DateTimePicker::make('created_at')
                     ->label('Created At')
                     ->disabled(),
@@ -91,6 +94,10 @@ class TokenResource extends Resource
                 Tables\Columns\TextColumn::make('expires_at')
                     ->dateTime()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('last_used_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->placeholder('Never'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
