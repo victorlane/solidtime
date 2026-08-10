@@ -4,34 +4,47 @@ This is a fork of `solidtime-io/solidtime`. Upstream is merged in periodically, 
 upstream-only assumptions get pulled back in on a regular basis. The notes below are the ones
 that keep costing time when they are forgotten.
 
-## The invoicing extension must stay out
+## Upstream's private extensions must stay out
 
-`solidtime-io/extension-invoicing` is a private repository belonging to upstream. This fork has
-no access to it and no deploy key for it, so any workflow step that tries to clone it fails with
-`remote: Repository not found` and takes the whole build down with it.
+`extension-invoicing`, `extension-billing` and `extension-services` are private repositories
+belonging to upstream. This fork has no access and no deploy keys, so any workflow step that
+tries to clone one fails with `remote: Repository not found` and takes the whole build down.
 
 Rules:
 
-- Do **not** add an `Invoicing` entry to `extensions/manifest.json`.
+- Do **not** add `extensions/manifest.json` back, or any entry describing an upstream extension.
 - Do **not** add checkout, `composer install`, `npm ci` or `php artisan module:enable` steps for
-  `extensions/Invoicing` to any workflow.
-- Do **not** reference `secrets.SSH_PRIVATE_KEY_INVOICING_EXTENSION`.
+  `extensions/Invoicing`, `extensions/Billing` or `extensions/Services`.
+- Do **not** reference `secrets.SSH_PRIVATE_KEY_INVOICING_EXTENSION`,
+  `SSH_PRIVATE_KEY_BILLING_EXTENSION` or `SSH_PRIVATE_KEY_SERVICES_EXTENSION`.
 - When an upstream merge reintroduces any of the above, remove it again as part of that merge
-  rather than leaving the build red. Search for `Invoicing`, `invoicing` and
-  `extension-invoicing` across `.github/workflows/` and `extensions/manifest.json`.
+  rather than leaving the build red. Search for `Invoicing`, `Billing`, `Services`,
+  `extension-` and `manifest.json` under `.github/workflows/`.
 
-The same access problem applies to `extension-billing` and `extension-services`, which are still
-referenced by `build-private.yml`. Those are left in place deliberately; see below.
+The extension mechanism itself still works: `extensions/extensions_autoload.php` scans the
+directory and loads whatever is present, so a self-contained extension dropped in there is fine.
+Only upstream's inaccessible ones are the problem.
 
-## Which builds actually matter here
+## Only one image build exists here, and it is ours
 
-`build-harbor.yml` is the one that produces the image this fork deploys, to
-`harbor.bmlabs.eu/victorlane/solidtime`. Keep it green.
+`build-harbor.yml` produces the image this fork deploys, to
+`harbor.bmlabs.eu/victorlane/solidtime`. It is the only build that publishes anything. Keep it
+green.
 
-`build-public.yml`, `build-private.yml` and `build-onpremise.yml` are upstream's publishing
-pipelines. They depend on registry credentials and extension deploy keys that only upstream has,
-so they fail in this fork for reasons unrelated to the code. Do not interpret their failure as a
-regression, and do not try to fix them by inventing credentials.
+Upstream's three publishing pipelines were deliberately deleted, because they push to registries
+this fork has no credentials for and clone extensions it has no access to:
+
+| Deleted | Published to |
+| --- | --- |
+| `build-private.yml` | `rg.fr-par.scw.cloud/solidtime` |
+| `build-public.yml` | `ghcr.io` |
+| `build-onpremise.yml` | `registry.on-premise.solidtime.io` |
+
+Do not restore them, and do not try to fix them by inventing credentials. If an upstream merge
+brings them back, delete them again.
+
+Everything else in `.github/workflows/` is a quality gate — phpunit, phpstan, pint, playwright,
+the npm jobs, api docs — and should stay green.
 
 ## Dependencies must resolve for PHP 8.3
 
