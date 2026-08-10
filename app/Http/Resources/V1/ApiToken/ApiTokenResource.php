@@ -31,8 +31,10 @@ class ApiTokenResource extends BaseResource
             'scopes' => $this->resource->scopes,
             /** @var string $created_at When the API token was created (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z) */
             'created_at' => $this->formatDateTime($this->resource->created_at),
-            /** @var string|null $expires_at At what time the API token expires (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z) */
+            /** @var string|null $expires_at At what time the API token expires, null means that the API token never expires (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z) */
             'expires_at' => $this->formatDateTime($this->resource->expires_at),
+            /** @var string|null $last_used_at When the API token was last used to authenticate a request, null means that the API token was never used (ISO 8601 format, UTC timezone, example: 2024-02-26T17:17:17Z) */
+            'last_used_at' => $this->formatDateTime($this->resource->last_used_at),
         ];
     }
 }

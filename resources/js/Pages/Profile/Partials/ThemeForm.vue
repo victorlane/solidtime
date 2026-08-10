@@ -21,7 +21,7 @@ const preferredColor = usePreferredColorScheme();
             <Field class="col-span-6 sm:col-span-4">
                 <FieldLabel for="theme">Theme</FieldLabel>
                 <Select id="theme" v-model="themeSetting">
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Theme">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

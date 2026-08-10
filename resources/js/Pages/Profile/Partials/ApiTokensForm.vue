@@ -16,8 +16,9 @@ import { useForm } from '@inertiajs/vue3';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useNotificationsStore } from '@/utils/notification';
 import { useClipboard } from '@vueuse/core';
-import { formatDateTimeLocalized } from '../../../packages/ui/src/utils/time';
+import { formatDateTimeLocalized, getDayJsInstance } from '../../../packages/ui/src/utils/time';
 import { ClockIcon } from '@heroicons/vue/20/solid';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/packages/ui/src';
 import type { Organization } from '@/packages/api/src';
 
 const queryClient = useQueryClient();
@@ -27,16 +28,46 @@ const apiTokenBeingRevoked = ref<ApiToken | null>(null);
 
 const { handleApiRequestNotifications } = useNotificationsStore();
 const newToken = ref('');
+const newTokenExpiresAt = ref<string | null>(null);
 
 const { copy, copied, isSupported } = useClipboard();
 
 const organization = inject<ComputedRef<Organization>>('organization');
+
+type ExpirationPreset = {
+    value: string;
+    label: string;
+    duration: { amount: number; unit: 'day' | 'year' } | null;
+};
+
+const expirationPresets: ExpirationPreset[] = [
+    { value: '30-days', label: '30 days', duration: { amount: 30, unit: 'day' } },
+    { value: '90-days', label: '90 days', duration: { amount: 90, unit: 'day' } },
+    { value: '1-year', label: '1 year', duration: { amount: 1, unit: 'year' } },
+    { value: '2-years', label: '2 years', duration: { amount: 2, unit: 'year' } },
+    { value: '5-years', label: '5 years', duration: { amount: 5, unit: 'year' } },
+    { value: 'never', label: 'No expiration', duration: null },
+];
+
+const expiration = ref('1-year');
+
+/**
+ * The expiration date that the selected preset resolves to, null means that the token never expires.
+ */
+const expiresAt = computed(() => {
+    const preset = expirationPresets.find((preset) => preset.value === expiration.value);
+    if (!preset?.duration) {
+        return null;
+    }
+    return getDayJsInstance()().utc().add(preset.duration.amount, preset.duration.unit).format();
+});
 
 async function createApiToken() {
     await handleApiRequestNotifications(
         () =>
             createApiTokenMutation.mutateAsync({
                 name: createApiTokenForm.name,
+                expires_at: expiresAt.value,
             }),
         'API Token successfully created',
         'There was an error while creating the API Token',
@@ -44,6 +75,7 @@ async function createApiToken() {
             createApiTokenForm.name = '';
             displayingToken.value = true;
             newToken.value = response.data.access_token;
+            newTokenExpiresAt.value = response.data.expires_at;
         }
     );
 }
@@ -156,10 +188,40 @@ const revokeApiTokenMutation = useMutation({
                     <FieldError v-if="createApiTokenForm.errors.name">{{
                         createApiTokenForm.errors.name
                     }}</FieldError>
+                </Field>
+
+                <!-- Token Expiration -->
+                <Field class="col-span-6 sm:col-span-4">
+                    <FieldLabel for="api_key_expiration">Expires in</FieldLabel>
+                    <Select id="api_key_expiration" v-model="expiration">
+                        <SelectTrigger aria-label="Expires in">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="preset in expirationPresets"
+                                :key="preset.value"
+                                :value="preset.value">
+                                {{ preset.label }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
                     <FieldDescription>
                         <span class="flex space-x-1.5 items-center text-text-tertiary font-medium">
                             <ClockIcon class="w-4"></ClockIcon>
-                            <span> API Tokens are valid for 1 year </span>
+                            <span v-if="expiresAt">
+                                The API Token expires on
+                                {{
+                                    formatDateTimeLocalized(
+                                        expiresAt,
+                                        organization?.date_format,
+                                        organization?.time_format
+                                    )
+                                }}
+                            </span>
+                            <span v-else>
+                                The API Token never expires, revoke it once it is no longer needed
+                            </span>
                         </span>
                     </FieldDescription>
                 </Field>
@@ -221,14 +283,23 @@ const revokeApiTokenMutation = useMutation({
                                                 )
                                             }}
                                         </span>
+                                        <span v-else> Never expires </span>
+                                        <span v-if="token.last_used_at">
+                                            Last used
+                                            {{
+                                                formatDateTimeLocalized(
+                                                    token.last_used_at,
+                                                    organization?.date_format,
+                                                    organization?.time_format
+                                                )
+                                            }}
+                                        </span>
+                                        <span v-else> Never used </span>
                                         <span v-if="token.revoked"> Revoked </span>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center ms-2">
-                                    <div v-if="token.last_used_ago" class="text-sm text-gray-400">
-                                        Last used {{ token.last_used_ago }}
-                                    </div>
                                     <button
                                         v-if="!token.revoked"
                                         class="cursor-pointer ms-6 text-sm text-text-secondary"
@@ -257,7 +328,18 @@ const revokeApiTokenMutation = useMutation({
             <template #content>
                 <div>
                     Please copy your new API token. For your security, it won't be shown again.
-                    <strong>This token is valid for one year</strong> unless you revoke it.
+                    <strong v-if="newTokenExpiresAt">
+                        This token is valid until
+                        {{
+                            formatDateTimeLocalized(
+                                newTokenExpiresAt,
+                                organization?.date_format,
+                                organization?.time_format
+                            )
+                        }}</strong
+                    >
+                    <strong v-else>This token never expires</strong>
+                    unless you revoke it.
                 </div>
 
                 <div></div>

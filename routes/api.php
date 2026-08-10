@@ -40,6 +40,7 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
     Route::middleware([
         'auth:api',
         'verified',
+        'update-api-token-last-used-at',
     ])->group(static function (): void {
         // Organization routes
         Route::name('organizations.')->group(static function (): void {

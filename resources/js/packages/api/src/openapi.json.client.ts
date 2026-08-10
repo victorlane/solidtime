@@ -9,10 +9,16 @@ const ApiTokenResource = z
         scopes: z.array(z.string()),
         created_at: z.string(),
         expires_at: z.union([z.string(), z.null()]),
+        last_used_at: z.union([z.string(), z.null()]),
     })
     .passthrough();
 const ApiTokenCollection = z.array(ApiTokenResource);
-const ApiTokenStoreRequest = z.object({ name: z.string().min(1).max(255) }).passthrough();
+const ApiTokenStoreRequest = z
+    .object({
+        name: z.string().min(1).max(255),
+        expires_at: z.union([z.string(), z.null()]).optional(),
+    })
+    .passthrough();
 const ApiTokenWithAccessTokenResource = z
     .object({
         id: z.string(),
@@ -21,6 +27,7 @@ const ApiTokenWithAccessTokenResource = z
         scopes: z.array(z.string()),
         created_at: z.string(),
         expires_at: z.union([z.string(), z.null()]),
+        last_used_at: z.union([z.string(), z.null()]),
         access_token: z.string(),
     })
     .passthrough();
@@ -4980,7 +4987,7 @@ Please note that the access token is only shown in this response and cannot be r
             {
                 name: 'body',
                 type: 'Body',
-                schema: z.object({ name: z.string().min(1).max(255) }).passthrough(),
+                schema: ApiTokenStoreRequest,
             },
         ],
         response: z.object({ data: ApiTokenWithAccessTokenResource }).passthrough(),

@@ -386,6 +386,22 @@ async function createNewApiToken(page) {
 test('test that user can create an API key', async ({ page }) => {
     await page.goto(PLAYWRIGHT_BASE_URL + '/user/profile');
     await createNewApiToken(page);
+    await expect(page.locator('body')).toContainText('Never used');
+});
+
+test('test that user can create an API key that never expires', async ({ page }) => {
+    await page.goto(PLAYWRIGHT_BASE_URL + '/user/profile');
+    await page.getByLabel('API Key Name').fill('NEVER EXPIRING API KEY');
+    await page.getByLabel('Expires in').click();
+    await page.getByRole('option', { name: 'No expiration' }).click();
+    await Promise.all([
+        page.getByRole('button', { name: 'Create API Key' }).click(),
+        page.waitForResponse('**/users/me/api-tokens'),
+    ]);
+
+    await expect(page.getByRole('dialog')).toContainText('This token never expires');
+    await page.getByRole('dialog').getByText('Close').click();
+    await expect(page.locator('body')).toContainText('Never expires');
 });
 
 test('test that creating an API key with empty name shows validation error', async ({ page }) => {
@@ -543,7 +559,7 @@ test('test that theme can be changed to dark and light', async ({ page }) => {
     await goToProfilePage(page);
 
     // The theme select is a Reka UI combobox (button), not a native <select>
-    const themeSelect = page.locator('button[role="combobox"]');
+    const themeSelect = page.getByRole('combobox', { name: 'Theme' });
 
     // Change theme to dark
     await themeSelect.click();
@@ -569,7 +585,7 @@ test('test that theme can be changed to dark and light', async ({ page }) => {
     await expect(page.locator('html')).toHaveClass(/light/);
 
     // Reset to system
-    await page.locator('button[role="combobox"]').click();
+    await themeSelect.click();
     await page.getByRole('option', { name: 'System' }).click();
     await expect(page.getByText('System default:')).toBeVisible();
 });
