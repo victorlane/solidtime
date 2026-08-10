@@ -54,6 +54,87 @@ const ClientUpdateRequest = z
         metadata: z.union([z.record(z.string().max(500)), z.null()]).optional(),
     })
     .passthrough();
+const RetainerResource = z
+    .object({
+        id: z.string(),
+        organization_id: z.string(),
+        client_id: z.string(),
+        name: z.string(),
+        description: z.union([z.string(), z.null()]),
+        period_mode: z.enum(['calendar', 'anchor', 'explicit']),
+        period_unit: z.union([z.enum(['weekly', 'monthly', 'quarterly']), z.null()]),
+        seconds_per_period: z.union([z.number().int(), z.null()]),
+        anchor_date: z.union([z.string(), z.null()]),
+        starts_at: z.string(),
+        ends_at: z.union([z.string(), z.null()]),
+        billable_only: z.boolean(),
+        hard_cap_enabled: z.boolean(),
+        hard_cap_scope: z.union([z.enum(['per_period', 'cumulative']), z.null()]),
+        hard_cap_enforcement: z.union([z.enum(['block', 'flag', 'approval']), z.null()]),
+        hard_cap_cumulative_seconds: z.union([z.number().int(), z.null()]),
+        sub_cap_mode: z.enum(['soft', 'strict']),
+        created_at: z.string(),
+        updated_at: z.string(),
+    })
+    .passthrough();
+const RetainerStoreRequest = z
+    .object({
+        name: z.string().min(1).max(255),
+        description: z.union([z.string(), z.null()]).optional(),
+        period_mode: z.enum(['calendar', 'anchor', 'explicit']),
+        period_unit: z.union([z.enum(['weekly', 'monthly', 'quarterly']), z.null()]).optional(),
+        seconds_per_period: z.union([z.number().int().gte(0), z.null()]).optional(),
+        anchor_date: z.union([z.string(), z.null()]).optional(),
+        starts_at: z.string(),
+        ends_at: z.union([z.string(), z.null()]).optional(),
+        billable_only: z.boolean().optional(),
+        hard_cap_enabled: z.boolean().optional(),
+        hard_cap_scope: z.union([z.enum(['per_period', 'cumulative']), z.null()]).optional(),
+        hard_cap_enforcement: z.union([z.enum(['block', 'flag', 'approval']), z.null()]).optional(),
+        hard_cap_cumulative_seconds: z.union([z.number().int().gte(0), z.null()]).optional(),
+        sub_cap_mode: z.union([z.enum(['soft', 'strict']), z.null()]).optional(),
+    })
+    .passthrough();
+const RetainerUpdateRequest = z
+    .object({
+        name: z.string().min(1).max(255).optional(),
+        description: z.union([z.string(), z.null()]).optional(),
+        period_mode: z.enum(['calendar', 'anchor', 'explicit']).optional(),
+        period_unit: z.union([z.enum(['weekly', 'monthly', 'quarterly']), z.null()]).optional(),
+        seconds_per_period: z.union([z.number().int().gte(0), z.null()]).optional(),
+        anchor_date: z.union([z.string(), z.null()]).optional(),
+        starts_at: z.string().optional(),
+        ends_at: z.union([z.string(), z.null()]).optional(),
+        billable_only: z.boolean().optional(),
+        hard_cap_enabled: z.boolean().optional(),
+        hard_cap_scope: z.union([z.enum(['per_period', 'cumulative']), z.null()]).optional(),
+        hard_cap_enforcement: z.union([z.enum(['block', 'flag', 'approval']), z.null()]).optional(),
+        hard_cap_cumulative_seconds: z.union([z.number().int().gte(0), z.null()]).optional(),
+        sub_cap_mode: z.enum(['soft', 'strict']).optional(),
+    })
+    .passthrough();
+const RetainerCurrentPeriodStatus = z
+    .object({
+        starts_at: z.string(),
+        ends_at: z.string(),
+        allocated_seconds: z.number().int(),
+        tracked_seconds: z.number().int(),
+        delta_seconds: z.number().int(),
+        percent: z.number(),
+    })
+    .passthrough();
+const RetainerStatusResource = z
+    .object({
+        as_of: z.string(),
+        allocated_seconds: z.number().int(),
+        tracked_seconds: z.number().int(),
+        delta_seconds: z.number().int(),
+        percent: z.number(),
+        hard_cap_enabled: z.boolean(),
+        hard_cap_scope: z.union([z.string(), z.null()]),
+        current_period: z.union([RetainerCurrentPeriodStatus, z.null()]),
+    })
+    .passthrough();
 const DestroyWithPasswordRequest = z.object({ password: z.string() }).passthrough();
 const ImportRequest = z.object({ type: z.string(), data: z.string() }).passthrough();
 const InvitationResource = z
@@ -745,6 +826,7 @@ const UserResource = z
         profile_photo_url: z.string(),
         timezone: z.string(),
         week_start: Weekday,
+        hidden_nav_items: z.array(z.string()),
     })
     .passthrough();
 const UserUpdateRequest = z
@@ -754,6 +836,7 @@ const UserUpdateRequest = z
         photo: z.union([z.string(), z.null()]),
         timezone: z.string(),
         week_start: Weekday,
+        hidden_nav_items: z.array(z.string()),
     })
     .partial()
     .passthrough();
@@ -1549,6 +1632,251 @@ const endpoints = makeApi([
                     .object({ error: z.boolean(), key: z.string(), message: z.string() })
                     .passthrough(),
             },
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
+        path: '/v1/organizations/:organization/clients/:client/retainers',
+        alias: 'getRetainersForClient',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'client',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z.object({ data: z.array(RetainerResource) }).passthrough(),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'post',
+        path: '/v1/organizations/:organization/clients/:client/retainers',
+        alias: 'createRetainer',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'body',
+                type: 'Body',
+                schema: RetainerStoreRequest,
+            },
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'client',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z.object({ data: RetainerResource }).passthrough(),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 422,
+                description: `Validation error`,
+                schema: z
+                    .object({ message: z.string(), errors: z.record(z.array(z.string())) })
+                    .passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
+        path: '/v1/organizations/:organization/retainers/:retainer',
+        alias: 'getRetainer',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'retainer',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z.object({ data: RetainerResource }).passthrough(),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'put',
+        path: '/v1/organizations/:organization/retainers/:retainer',
+        alias: 'updateRetainer',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'body',
+                type: 'Body',
+                schema: RetainerUpdateRequest,
+            },
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'retainer',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z.object({ data: RetainerResource }).passthrough(),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 422,
+                description: `Validation error`,
+                schema: z
+                    .object({ message: z.string(), errors: z.record(z.array(z.string())) })
+                    .passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'delete',
+        path: '/v1/organizations/:organization/retainers/:retainer',
+        alias: 'deleteRetainer',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'retainer',
+                type: 'Path',
+                schema: z.string(),
+            },
+        ],
+        response: z.void(),
+        errors: [
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 403,
+                description: `Authorization error`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 404,
+                description: `Not found`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
+        path: '/v1/organizations/:organization/retainers/:retainer/status',
+        alias: 'getRetainerStatus',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'organization',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'retainer',
+                type: 'Path',
+                schema: z.string(),
+            },
+            {
+                name: 'as_of',
+                type: 'Query',
+                schema: z.string().optional(),
+            },
+        ],
+        response: z.object({ data: RetainerStatusResource }).passthrough(),
+        errors: [
             {
                 status: 401,
                 description: `Unauthenticated`,

@@ -58,6 +58,14 @@ export type UpdateTaskBody = ZodiosBodyByAlias<SolidTimeApi, 'updateTask'>;
 export type ClientIndexResponse = ZodiosResponseByAlias<SolidTimeApi, 'getClients'>;
 export type Client = ClientIndexResponse['data'][0];
 
+export type RetainerIndexResponse = ZodiosResponseByAlias<SolidTimeApi, 'getRetainersForClient'>;
+export type Retainer = RetainerIndexResponse['data'][0];
+
+export type CreateRetainerBody = ZodiosBodyByAlias<SolidTimeApi, 'createRetainer'>;
+export type UpdateRetainerBody = ZodiosBodyByAlias<SolidTimeApi, 'updateRetainer'>;
+
+export type RetainerStatus = ZodiosResponseByAlias<SolidTimeApi, 'getRetainerStatus'>['data'];
+
 export type MemberIndexResponse = ZodiosResponseByAlias<SolidTimeApi, 'getMembers'>;
 export type Member = MemberIndexResponse['data'][0];
 

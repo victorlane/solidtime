@@ -2532,6 +2532,55 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         ]);
     }
 
+    public function test_store_endpoint_fails_if_duration_exceeds_max_duration(): void
+    {
+        // Arrange
+        Config::set('time.max_duration_hours', 2);
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $start = Carbon::now()->subHours(3);
+        $timeEntryFake = TimeEntry::factory()->startWithDuration($start, 3 * 3600 + 1)->forOrganization($data->organization)->make();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => $timeEntryFake->billable,
+            'start' => $timeEntryFake->start->toIso8601ZuluString(),
+            'end' => $timeEntryFake->end->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'end' => 'The time entry duration must not exceed 2 hours.',
+        ]);
+    }
+
+    public function test_store_endpoint_succeeds_if_duration_is_exactly_max_duration(): void
+    {
+        // Arrange
+        Config::set('time.max_duration_hours', 2);
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $start = Carbon::now()->subHours(3);
+        $timeEntryFake = TimeEntry::factory()->startWithDuration($start, 2 * 3600)->forOrganization($data->organization)->make();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => $timeEntryFake->billable,
+            'start' => $timeEntryFake->start->toIso8601ZuluString(),
+            'end' => $timeEntryFake->end->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+    }
+
     public function test_store_endpoint_creates_new_time_entry_with_metadata(): void
     {
         // Arrange
@@ -3184,6 +3233,31 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
             'id' => $timeEntry->getKey(),
             'member_id' => $data->member->getKey(),
             'task_id' => $timeEntryFake->task_id,
+        ]);
+    }
+
+    public function test_update_endpoint_fails_if_duration_exceeds_max_duration_using_existing_start_when_start_not_sent(): void
+    {
+        // Arrange
+        Config::set('time.max_duration_hours', 2);
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $start = Carbon::now()->subHours(3);
+        $timeEntry = TimeEntry::factory()->startWithDuration($start, 3600)->forOrganization($data->organization)->forMember($data->member)->create();
+        Passport::actingAs($data->user);
+
+        // Act: only 'end' is sent, so the max-duration check must fall back to the
+        // time entry's existing 'start' instead of treating it as unbounded.
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'end' => $start->copy()->addHours(3)->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'end' => 'The time entry duration must not exceed 2 hours.',
         ]);
     }
 

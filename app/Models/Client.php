@@ -66,6 +66,14 @@ class Client extends Model implements AuditableContract
     }
 
     /**
+     * @return HasMany<Retainer, $this>
+     */
+    public function retainers(): HasMany
+    {
+        return $this->hasMany(Retainer::class, 'client_id');
+    }
+
+    /**
      * @param  Builder<Client>  $builder
      * @return Builder<Client>
      */

@@ -65,6 +65,22 @@ export function canViewClients() {
     return currentUserHasPermission('clients:view');
 }
 
+export function canViewRetainers() {
+    return currentUserHasPermission('retainers:view');
+}
+
+export function canCreateRetainers() {
+    return currentUserHasPermission('retainers:create');
+}
+
+export function canUpdateRetainers() {
+    return currentUserHasPermission('retainers:update');
+}
+
+export function canDeleteRetainers() {
+    return currentUserHasPermission('retainers:delete');
+}
+
 export function canViewMembers() {
     return currentUserHasPermission('members:view');
 }

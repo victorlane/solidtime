@@ -10,7 +10,11 @@ import type {
     TimeEntry,
     Client,
 } from '@/packages/api/src';
-import { getDayJsInstance, getLocalizedDateFromTimestamp } from '@/packages/ui/src/utils/time';
+import {
+    getDayJsInstance,
+    getLocalizedDateFromTimestamp,
+    shiftDuplicateInterval,
+} from '@/packages/ui/src/utils/time';
 import {
     getBreakPlacementHint,
     type BreakPlacementHint,
@@ -198,7 +202,10 @@ function unselectAllTimeEntries(value: TimeEntriesGroupedByType[]) {
                     :tags="tags"
                     :clients
                     :on-start-stop-click="startTimeEntryFromExisting"
-                    :duplicate-time-entry="createTimeEntry"
+                    :duplicate-time-entry="
+                        (entryToDuplicate: TimeEntry) =>
+                            createTimeEntry(shiftDuplicateInterval(entryToDuplicate))
+                    "
                     :update-time-entries
                     :update-time-entry
                     :delete-time-entries
@@ -243,7 +250,7 @@ function unselectAllTimeEntries(value: TimeEntriesGroupedByType[]) {
                     :update-time-entry
                     :on-start-stop-click="() => startTimeEntryFromExisting(entry)"
                     :delete-time-entry="() => deleteTimeEntries([entry])"
-                    :duplicate-time-entry="() => createTimeEntry(entry)"
+                    :duplicate-time-entry="() => createTimeEntry(shiftDuplicateInterval(entry))"
                     :create-time-entry="createTimeEntry"
                     :placement-hint="breakPlacementHints[entry.timeEntries[0]!.id] ?? null"
                     :fix-in-calendar="fixInCalendar"

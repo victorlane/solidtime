@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\Public\ReportController as PublicReportController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\RetainerController;
 use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
@@ -164,6 +165,16 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
             Route::post('/clients', [ClientController::class, 'store'])->name('store')->middleware('check-organization-blocked');
             Route::put('/clients/{client}', [ClientController::class, 'update'])->name('update')->middleware('check-organization-blocked');
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('destroy');
+        });
+
+        // Retainer routes
+        Route::name('retainers.')->prefix('/organizations/{organization}')->group(static function (): void {
+            Route::get('/clients/{client}/retainers', [RetainerController::class, 'index'])->name('index');
+            Route::post('/clients/{client}/retainers', [RetainerController::class, 'store'])->name('store')->middleware('check-organization-blocked');
+            Route::get('/retainers/{retainer}', [RetainerController::class, 'show'])->name('show');
+            Route::put('/retainers/{retainer}', [RetainerController::class, 'update'])->name('update')->middleware('check-organization-blocked');
+            Route::delete('/retainers/{retainer}', [RetainerController::class, 'destroy'])->name('destroy');
+            Route::get('/retainers/{retainer}/status', [RetainerController::class, 'status'])->name('status');
         });
 
         // Task routes

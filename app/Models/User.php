@@ -36,12 +36,14 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * @property string $name
  * @property string $email
  * @property string|null $pending_email
+ * @property string|null $oidc_sub
  * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string|null $two_factor_secret
  * @property string $timezone
  * @property bool $is_placeholder
  * @property Weekday $week_start
+ * @property list<string> $hidden_nav_items
  * @property string|null $profile_photo_path
  * @property-read Organization|null $currentOrganization
  * @property-read string $profile_photo_url
@@ -81,6 +83,7 @@ class User extends Authenticatable implements AuditableContract, FilamentUser, M
         'name',
         'email',
         'password',
+        'hidden_nav_items',
     ];
 
     /**
@@ -104,10 +107,12 @@ class User extends Authenticatable implements AuditableContract, FilamentUser, M
         'name' => 'string',
         'email' => 'string',
         'pending_email' => 'string',
+        'oidc_sub' => 'string',
         'email_verified_at' => 'datetime',
         'is_admin' => 'boolean',
         'is_placeholder' => 'boolean',
         'week_start' => Weekday::class,
+        'hidden_nav_items' => 'array',
     ];
 
     /**
@@ -117,6 +122,7 @@ class User extends Authenticatable implements AuditableContract, FilamentUser, M
      */
     protected $attributes = [
         'week_start' => Weekday::Monday,
+        'hidden_nav_items' => '[]',
     ];
 
     /**

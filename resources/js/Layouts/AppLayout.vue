@@ -39,6 +39,7 @@ import {
     canViewTags,
 } from '@/utils/permissions';
 import { isBillingActivated, isInvoicingActivated, isPremiumSilenced } from '@/utils/billing';
+import { useNavVisibility } from '@/utils/navVisibility';
 import type { User } from '@/types/models';
 import { ArrowsRightLeftIcon } from '@heroicons/vue/16/solid';
 import { fetchToken, isTokenValid } from '@/utils/session';
@@ -88,6 +89,8 @@ const { organization, isLoading: isOrganizationLoading } = useOrganizationQuery(
 );
 
 provide('organization', organization);
+
+const { isVisible: isNavItemVisible } = useNavVisibility();
 
 onMounted(async () => {
     useTheme();
@@ -178,16 +181,19 @@ const page = usePage<{
                                 :href="route('dashboard')"
                                 :current="route().current('dashboard')"></NavigationSidebarItem>
                             <NavigationSidebarItem
+                                v-if="isNavItemVisible('time')"
                                 title="Time"
                                 :icon="ClockIcon"
                                 :current="route().current('time')"
                                 :href="route('time')"></NavigationSidebarItem>
                             <NavigationSidebarItem
+                                v-if="isNavItemVisible('calendar')"
                                 title="Calendar"
                                 :icon="CalendarIcon"
                                 :current="route().current('calendar')"
                                 :href="route('calendar')"></NavigationSidebarItem>
                             <NavigationSidebarItem
+                                v-if="isNavItemVisible('timesheet')"
                                 title="Timesheet"
                                 :icon="TableCellsIcon"
                                 :current="route().current('timesheet')"
@@ -209,13 +215,20 @@ const page = usePage<{
                                     {
                                         title: 'Shared',
                                         route: 'reporting.shared',
+                                        show:
+                                            canViewReport() && isNavItemVisible('reporting_shared'),
+                                    },
+                                    {
+                                        title: 'Business',
+                                        route: 'reporting.business',
                                         show: canViewReport(),
                                     },
                                 ]"
                                 :current="
                                     route().current('reporting') ||
                                     route().current('reporting.detailed') ||
-                                    route().current('reporting.shared')
+                                    route().current('reporting.shared') ||
+                                    route().current('reporting.business')
                                 "
                                 :href="route('reporting')">
                             </NavigationSidebarItem>
@@ -227,25 +240,25 @@ const page = usePage<{
                     <nav>
                         <ul>
                             <NavigationSidebarItem
-                                v-if="canViewProjects()"
+                                v-if="canViewProjects() && isNavItemVisible('projects')"
                                 title="Projects"
                                 :icon="FolderIcon"
                                 :href="route('projects')"
                                 :current="route().current('projects')"></NavigationSidebarItem>
                             <NavigationSidebarItem
-                                v-if="canViewClients()"
+                                v-if="canViewClients() && isNavItemVisible('clients')"
                                 title="Clients"
                                 :icon="UserCircleIcon"
                                 :current="route().current('clients')"
                                 :href="route('clients')"></NavigationSidebarItem>
                             <NavigationSidebarItem
-                                v-if="canViewMembers()"
+                                v-if="canViewMembers() && isNavItemVisible('members')"
                                 title="Members"
                                 :icon="UserGroupIcon"
                                 :current="route().current('members')"
                                 :href="route('members')"></NavigationSidebarItem>
                             <NavigationSidebarItem
-                                v-if="canViewTags()"
+                                v-if="canViewTags() && isNavItemVisible('tags')"
                                 title="Tags"
                                 :icon="TagIcon"
                                 :current="route().current('tags')"
@@ -277,7 +290,7 @@ const page = usePage<{
                                 :icon="CreditCardIcon"
                                 href="/billing"></NavigationSidebarItem>
                             <NavigationSidebarItem
-                                v-if="canUpdateOrganization()"
+                                v-if="canUpdateOrganization() && isNavItemVisible('import')"
                                 title="Import / Export"
                                 :icon="ArrowsRightLeftIcon"
                                 :current="route().current('import')"
