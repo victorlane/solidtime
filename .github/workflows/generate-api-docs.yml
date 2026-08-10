@@ -13,7 +13,7 @@ jobs:
 
     services:
       pgsql_test:
-        image: postgres:15
+        image: postgres:18
         env:
           PGPASSWORD: 'root'
           POSTGRES_DB: 'laravel'
@@ -56,11 +56,3 @@ jobs:
         with:
           name: api-docs.json
           path: build/api-docs.json
-
-      - name: "Download Fastfront CLI"
-        run: curl https://fastfront-cli.s3.fr-par.scw.cloud/fastfront-cli.phar -o fastfront-cli.phar
-
-      - name: "Deploy with Fastfront"
-        run: php fastfront-cli.phar deploy 9beab6cf-f459-446b-85f1-38ec007cf457 ./build
-        env:
-          FASTFRONT_API_KEY: ${{ secrets.FASTFRONT_API_DOCS_API_KEY }}
