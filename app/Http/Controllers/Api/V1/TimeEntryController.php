@@ -516,7 +516,7 @@ class TimeEntryController extends Controller
             ], true);
         } else {
             Excel::store(
-                new TimeEntriesReportExport($aggregatedData, $format, $currency, $group, $subGroup, $showBillableRate),
+                new TimeEntriesReportExport($aggregatedData, $format, $currency, $group, $subGroup, $showBillableRate, $localizationService),
                 $path,
                 config('filesystems.private'),
                 $format->getExportPackageType(),
