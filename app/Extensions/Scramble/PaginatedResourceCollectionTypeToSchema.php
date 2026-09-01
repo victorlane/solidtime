@@ -98,10 +98,13 @@ class PaginatedResourceCollectionTypeToSchema extends TypeToSchemaExtension
         if (! $collectingClassType instanceof ObjectType) {
             return null;
         }
-        $type = $this->toSchema($type);
+        $schemaType = $this->toSchema($type);
+        if ($schemaType === null) {
+            return null;
+        }
 
         return Response::make(200)
             ->description('Paginated set of `'.$this->components->uniqueSchemaName($collectingClassType->name).'`')
-            ->setContent('application/json', Schema::fromType($type));
+            ->setContent('application/json', Schema::fromType($schemaType));
     }
 }
