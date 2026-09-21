@@ -1288,3 +1288,36 @@ test.describe('Projects Pagination', () => {
         await expect(page.getByText(prefix + '00')).not.toBeVisible();
     });
 });
+
+test('test that searching projects by name works', async ({ page, ctx }) => {
+    const suffix = Math.floor(1 + Math.random() * 10000);
+    const matchingProjectName = 'Searchable Project ' + suffix;
+    const otherProjectName = 'Unrelated Work ' + suffix;
+    await createProjectViaApi(ctx, { name: matchingProjectName });
+    await createProjectViaApi(ctx, { name: otherProjectName });
+
+    await goToProjectsOverview(page);
+    await clearTableState(page, 'project-table-state');
+    await page.reload();
+    await expect(page.getByText(matchingProjectName)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(otherProjectName)).toBeVisible();
+
+    const searchInput = page.getByRole('searchbox', { name: 'Search projects' });
+
+    // Searching is case insensitive and matches part of the name
+    await searchInput.fill('SEARCHABLE');
+    await expect(page.getByText(matchingProjectName)).toBeVisible();
+    await expect(page.getByText(otherProjectName)).not.toBeVisible();
+
+    // A term that matches nothing empties the table
+    await searchInput.fill('no project has this name');
+    await expect(page.getByText(matchingProjectName)).not.toBeVisible();
+    await expect(page.getByText(otherProjectName)).not.toBeVisible();
+    await expect(page.getByText('No matching projects')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create your First Project' })).not.toBeVisible();
+
+    // Clearing the search restores both projects
+    await searchInput.fill('');
+    await expect(page.getByText(matchingProjectName)).toBeVisible();
+    await expect(page.getByText(otherProjectName)).toBeVisible();
+});

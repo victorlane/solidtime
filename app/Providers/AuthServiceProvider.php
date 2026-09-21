@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Auth\ActiveUserProvider;
 use App\Models\Passport\AuthCode;
 use App\Models\Passport\Client;
 use App\Models\Passport\RefreshToken;
 use App\Models\Passport\Token;
 use App\Models\User;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Passport\Passport;
 
@@ -28,6 +31,13 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Replaces the built-in eloquent user provider, so that no authentication flow can
+        // resolve a placeholder user. The driver name is kept, because Passport recognizes
+        // only providers that are configured with the driver "eloquent".
+        Auth::provider('eloquent', function (Application $app, array $config): ActiveUserProvider {
+            return new ActiveUserProvider($app->make('hash'), $config['model']);
+        });
+
         // Gate used by Scramble's RestrictedDocsAccess middleware to guard `/docs/api` and
         // `/docs/api.json`. The generated OpenAPI document only describes the public API surface,
         // which every role (owner, manager, employee) is allowed to use with a personal access

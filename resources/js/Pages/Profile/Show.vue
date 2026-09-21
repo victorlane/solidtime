@@ -10,6 +10,7 @@ import type { Session } from '@/types/jetstream';
 import ApiTokensForm from '@/Pages/Profile/Partials/ApiTokensForm.vue';
 import ThemeForm from '@/Pages/Profile/Partials/ThemeForm.vue';
 import InterfacePreferencesForm from '@/Pages/Profile/Partials/InterfacePreferencesForm.vue';
+import NotificationSettingsForm from '@/Pages/Profile/Partials/NotificationSettingsForm.vue';
 
 defineProps<{
     confirmsTwoFactorAuthentication: boolean;
@@ -39,6 +40,12 @@ defineProps<{
 
                 <div>
                     <InterfacePreferencesForm />
+
+                    <SectionBorder />
+                </div>
+
+                <div>
+                    <NotificationSettingsForm />
 
                     <SectionBorder />
                 </div>

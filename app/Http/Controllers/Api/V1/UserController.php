@@ -128,6 +128,10 @@ class UserController extends Controller
             $user->hidden_nav_items = $request->getHiddenNavItems();
         }
 
+        if ($request->getSendTimeEntryStillRunningEmail() !== null) {
+            $user->send_time_entry_still_running_email = $request->getSendTimeEntryStillRunningEmail();
+        }
+
         $user->save();
 
         if ($emailToVerify !== null) {

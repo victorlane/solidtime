@@ -38,6 +38,8 @@ class UserResource extends BaseResource
             'week_start' => $this->resource->week_start->value,
             /** @var array<string> $hidden_nav_items Navigation items the user has hidden for themselves */
             'hidden_nav_items' => $this->resource->hidden_nav_items,
+            /** @var bool $send_time_entry_still_running_email Whether to email the user when a time entry has been running for more than 8 hours */
+            'send_time_entry_still_running_email' => $this->resource->send_time_entry_still_running_email,
         ];
     }
 }

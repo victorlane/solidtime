@@ -100,7 +100,7 @@ return [
 
     'force_https' => (bool) env('APP_FORCE_HTTPS', false),
 
-    'enable_registration' => (bool) env('APP_ENABLE_REGISTRATION', false),
+    'enable_registration' => env('APP_ENABLE_REGISTRATION', 'off'),
 
     /*
      * Hides the upgrade nags (billing banners, "Upgrade" badges and lock icons). Purely cosmetic:

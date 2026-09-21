@@ -80,6 +80,9 @@ class UserUpdateRequest extends BaseFormRequest
             'hidden_nav_items.*' => [
                 Rule::enum(HideableNavItem::class),
             ],
+            'send_time_entry_still_running_email' => [
+                'boolean',
+            ],
         ];
     }
 
@@ -107,9 +110,6 @@ class UserUpdateRequest extends BaseFormRequest
      * Null means the field was not sent (leave the user's stored preference untouched);
      * an empty array is a valid value meaning "everything visible".
      *
-     * @return array<int, string>|null
-     */
-    /**
      * @return list<string>|null
      */
     public function getHiddenNavItems(): ?array
@@ -120,6 +120,13 @@ class UserUpdateRequest extends BaseFormRequest
         $value = $this->input('hidden_nav_items');
 
         return is_array($value) ? array_values(array_map('strval', $value)) : [];
+    }
+
+    public function getSendTimeEntryStillRunningEmail(): ?bool
+    {
+        return $this->has('send_time_entry_still_running_email')
+            ? $this->boolean('send_time_entry_still_running_email')
+            : null;
     }
 
     public function hasPhotoKey(): bool
