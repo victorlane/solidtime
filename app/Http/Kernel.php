@@ -24,6 +24,7 @@ use App\Http\Middleware\ValidateSignature;
 use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Auth\Middleware\RequirePassword;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
@@ -34,6 +35,7 @@ use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Middleware\SetCacheHeaders;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Router;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -111,4 +113,12 @@ class Kernel extends HttpKernel
         'check-organization-blocked' => CheckOrganizationBlocked::class,
         'update-api-token-last-used-at' => UpdateApiTokenLastUsedAt::class,
     ];
+
+    public function __construct(Application $app, Router $router)
+    {
+        parent::__construct($app, $router);
+
+        // Before authentication, so API authentication errors are rendered as JSON for every client
+        $this->prependToMiddlewarePriority(ForceJsonResponse::class);
+    }
 }

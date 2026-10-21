@@ -77,6 +77,21 @@ class AuthenticateApiMiddlewareTest extends MiddlewareTestAbstract
         $response->assertStatus(401);
     }
 
+    public function test_unauthenticated_request_gets_a_json_error_even_without_a_json_accept_header(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission();
+
+        // Act
+        $response = $this->get(route('api.v1.tags.index', $data->organization->getKey()), [
+            'Accept' => 'text/html',
+        ]);
+
+        // Assert
+        $response->assertStatus(401);
+        $response->assertExactJson(['message' => 'Unauthenticated.']);
+    }
+
     public function test_request_of_a_user_is_still_authenticated(): void
     {
         // Arrange
