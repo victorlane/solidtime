@@ -74,6 +74,16 @@ class ApiDocsExportTest extends TestCaseWithDatabase
         $this->assertNotEmpty($docs['paths']);
     }
 
+    public function test_api_docs_point_to_the_instance_they_are_served_from(): void
+    {
+        // Act
+        $docs = $this->exportApiDocs();
+
+        // Assert
+        $this->assertSame([['url' => '/api']], $docs['servers']);
+        $this->assertSame('/oauth/authorize', $docs['components']['securitySchemes']['oauth2']['flows']['authorizationCode']['authorizationUrl']);
+    }
+
     public function test_api_docs_are_generated_without_diagnostics(): void
     {
         // Act

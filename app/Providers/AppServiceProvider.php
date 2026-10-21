@@ -29,6 +29,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Support\Generator\SecuritySchemes\OAuthFlow;
+use Dedoc\Scramble\Support\Generator\Server;
 use Filament\Schemas\Components\Section;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -97,11 +98,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Scramble
         Scramble::extendOpenApi(function (OpenApi $openApi): void {
+            // Relative URLs resolve against the host the document is served from, so "Try it" in the
+            // documentation UI calls the instance it is opened on, whichever of its hosts that is.
+            // An absolute URL would be fixed when the document is cached on container start.
+            $openApi->servers = [Server::make('/api')];
             $openApi->secure(
                 SecurityScheme::oauth2()
                     ->flow('authorizationCode', function (OAuthFlow $flow): void {
                         $flow
-                            ->authorizationUrl('https://solidtime.test/oauth/authorize');
+                            ->authorizationUrl('/oauth/authorize');
                     })
             );
         });

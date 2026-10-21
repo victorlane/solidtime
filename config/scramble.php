@@ -88,11 +88,8 @@ MD,
      * ],
      * ```
      */
-    'servers' => [
-        'Production' => 'https://app.solidtime.io/api',
-        'Staging' => 'https://app.staging.solidtime.io/api',
-        'Local' => 'https://solidtime.test/api',
-    ],
+    // Replaced by a relative `/api` server in AppServiceProvider, see there
+    'servers' => null,
 
     /*
      * Cache for the generated OpenAPI document. Without it every request to the documentation routes
