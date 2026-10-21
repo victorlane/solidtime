@@ -71,6 +71,9 @@ Route::middleware([
     Route::get('/reporting/business', function () {
         return Inertia::render('ReportingBusiness');
     })->name('reporting.business');
+    Route::get('/goals', function () {
+        return Inertia::render('Goals');
+    })->name('goals');
 
     Route::get('/projects', function () {
         return Inertia::render('Projects');

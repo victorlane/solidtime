@@ -30,8 +30,6 @@ class ClientController extends Controller
     /**
      * Get clients
      *
-     * @return ClientCollection<ClientResource>
-     *
      * @throws AuthorizationException
      *
      * @operationId getClients

@@ -36,8 +36,6 @@ class ProjectMemberController extends Controller
     /**
      * Get project members for project
      *
-     * @return ProjectMemberCollection<ProjectMemberResource>
-     *
      * @throws AuthorizationException
      *
      * @operationId getProjectMembers
@@ -75,14 +73,14 @@ class ProjectMemberController extends Controller
         }
 
         $projectMember = new ProjectMember;
-        $projectMember->billable_rate = $request->getBillableRate();
+        $projectMember->billable_rate = $this->canUseBillableRates($organization) ? $request->getBillableRate() : null;
         $projectMember->weekly_billable_target = $request->getWeeklyBillableTarget();
         $projectMember->member()->associate($member);
         $projectMember->user()->associate($member->user);
         $projectMember->project()->associate($project);
         $projectMember->save();
 
-        if ($request->getBillableRate() !== null) {
+        if ($projectMember->billable_rate !== null) {
             $billableRateService->updateTimeEntriesBillableRateForProjectMember($projectMember);
         }
 
@@ -100,13 +98,15 @@ class ProjectMemberController extends Controller
     {
         $this->checkPermission($organization, 'project-members:update', projectMember: $projectMember);
         $oldBillableRate = $projectMember->billable_rate;
-        $projectMember->billable_rate = $request->getBillableRate();
+        if ($this->canUseBillableRates($organization)) {
+            $projectMember->billable_rate = $request->getBillableRate();
+        }
         if ($request->has('weekly_billable_target')) {
             $projectMember->weekly_billable_target = $request->getWeeklyBillableTarget();
         }
         $projectMember->save();
 
-        if ($oldBillableRate !== $request->getBillableRate()) {
+        if ($oldBillableRate !== $projectMember->billable_rate) {
             $billableRateService->updateTimeEntriesBillableRateForProjectMember($projectMember);
         }
 

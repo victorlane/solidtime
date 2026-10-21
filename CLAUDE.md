@@ -6,8 +6,8 @@ that keep costing time when they are forgotten.
 
 ## Upstream's private extensions must stay out
 
-`extension-invoicing`, `extension-billing` and `extension-services` are private repositories
-belonging to upstream. This fork has no access and no deploy keys, so any workflow step that
+`extension-invoicing`, `extension-billing`, `extension-services` and `extension-auditing` are
+private repositories belonging to upstream. This fork has no access and no deploy keys, so any workflow step that
 tries to clone one fails with `remote: Repository not found` and takes the whole build down.
 
 Rules:
@@ -20,6 +20,9 @@ Rules:
 - When an upstream merge reintroduces any of the above, remove it again as part of that merge
   rather than leaving the build red. Search for `Invoicing`, `Billing`, `Services`,
   `extension-` and `manifest.json` under `.github/workflows/`.
+- Upstream's `phpunit-extensions.yml`, `playwright-extensions.yml` and
+  `extension-manifest-check.yml` exist only to test or validate those extensions. They were
+  deleted here for that reason; delete them again if a merge brings them back.
 
 The extension mechanism itself still works: `extensions/extensions_autoload.php` scans the
 directory and loads whatever is present, so a self-contained extension dropped in there is fine.

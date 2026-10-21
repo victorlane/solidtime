@@ -35,6 +35,7 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
         <env name="DB_CONNECTION" value="pgsql_test"/>
+        <env name="FILESYSTEM_DISK" value="local"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
@@ -44,5 +45,7 @@
         <env name="NEWSLETTER_URL" value="null"/>
         <env name="PASSPORT_PERSONAL_ACCESS_CLIENT_ID" value="null"/>
         <env name="PASSPORT_PERSONAL_ACCESS_CLIENT_SECRET" value="null"/>
+        <env name="PADDLE_API_KEY" value="test_phpunit_paddle_api_key"/>
+        <env name="PADDLE_SANDBOX" value="true"/>
     </php>
 </phpunit>

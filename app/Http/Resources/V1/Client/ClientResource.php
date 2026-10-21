@@ -21,20 +21,20 @@ class ClientResource extends BaseResource
     public function toArray(Request $request): array
     {
         return [
-            /** @var string $id ID */
+            /** ID */
             'id' => $this->resource->id,
-            /** @var string $name Name */
+            /** Name */
             'name' => $this->resource->name,
-            /** @var bool $is_archived Whether the client is archived */
+            /** Whether the client is archived */
             'is_archived' => $this->resource->is_archived,
             /** @var array<string, string> $metadata Custom metadata as key-value pairs, f.e. for linking the client to external systems */
             // Cast to object so an empty metadata map serialises as {} rather than [].
             // PHP encodes an empty array as a JSON array, which makes the field change
             // type depending on whether it happens to be populated and breaks typed clients.
             'metadata' => (object) ($this->resource->metadata ?? []),
-            /** @var string $created_at When the tag was created */
+            /** When the tag was created */
             'created_at' => $this->formatDateTime($this->resource->created_at),
-            /** @var string $updated_at When the tag was last updated */
+            /** When the tag was last updated */
             'updated_at' => $this->formatDateTime($this->resource->updated_at),
         ];
     }

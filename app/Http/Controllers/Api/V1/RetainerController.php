@@ -14,6 +14,7 @@ use App\Models\Organization;
 use App\Models\Retainer;
 use App\Service\Retainer\AllocationCalculator;
 use App\Service\Retainer\ConsumptionQuery;
+use App\Service\Retainer\RetainerStatus;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -189,16 +190,16 @@ class RetainerController extends Controller
             ];
         }
 
-        return new RetainerStatusResource([
-            'as_of' => $asOf->toDateString(),
-            'allocated_seconds' => $allocated,
-            'tracked_seconds' => $tracked,
-            'delta_seconds' => $tracked - $allocated,
-            'percent' => $percent,
-            'hard_cap_enabled' => $retainer->hard_cap_enabled,
-            'hard_cap_scope' => $retainer->hard_cap_scope?->value,
-            'current_period' => $currentPeriod,
-        ]);
+        return new RetainerStatusResource(new RetainerStatus(
+            asOf: $asOf->toDateString(),
+            allocatedSeconds: $allocated,
+            trackedSeconds: $tracked,
+            deltaSeconds: $tracked - $allocated,
+            percent: $percent,
+            hardCapEnabled: $retainer->hard_cap_enabled,
+            hardCapScope: $retainer->hard_cap_scope?->value,
+            currentPeriod: $currentPeriod,
+        ));
     }
 
     /**

@@ -29,6 +29,14 @@ export function isInvoicingActivated() {
     return page.props.has_invoicing_extension;
 }
 
+export function isGoalsExtensionActivated() {
+    const page = usePage<{
+        has_goals_extension: boolean;
+    }>();
+
+    return page.props.has_goals_extension;
+}
+
 export function isInTrial() {
     const page = usePage<{
         billing: {
@@ -61,6 +69,26 @@ export function isBlocked() {
     return page.props.billing.is_blocked;
 }
 
+/**
+ * The maximum number of goals the organization can have, null means unlimited.
+ * Archived goals count towards the limit as well.
+ */
+export function goalLimit(): number | null {
+    const page = usePage<{
+        billing: {
+            goal_limit: number | null;
+        } | null;
+    }>();
+
+    return page.props.billing?.goal_limit ?? null;
+}
+
+export function canCreateMoreGoals(goalCount: number): boolean {
+    const limit = goalLimit();
+
+    return limit === null || goalCount < limit;
+}
+
 export function isFreePlan() {
     return !hasActiveSubscription() && !isInTrial();
 }
@@ -81,4 +109,14 @@ export function isAllowedToPerformPremiumAction() {
         (isBillingActivated() && hasActiveSubscription()) ||
         (isBillingActivated() && isInTrial())
     );
+}
+
+export function canUseBillableRates() {
+    const page = usePage<{
+        billing: {
+            can_use_billable_rates?: boolean;
+        } | null;
+    }>();
+
+    return !isBillingActivated() || page.props.billing?.can_use_billable_rates !== false;
 }

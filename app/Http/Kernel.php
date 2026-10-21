@@ -12,6 +12,7 @@ use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\PreventRequestForgery;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\ShareInertiaData;
@@ -20,7 +21,6 @@ use App\Http\Middleware\TrustHosts;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\UpdateApiTokenLastUsedAt;
 use App\Http\Middleware\ValidateSignature;
-use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -70,7 +70,7 @@ class Kernel extends HttpKernel
             AddQueuedCookiesToResponse::class,
             StartSession::class,
             ShareErrorsFromSession::class,
-            VerifyCsrfToken::class,
+            PreventRequestForgery::class,
             SubstituteBindings::class,
             HandleInertiaRequests::class,
             ShareInertiaData::class,

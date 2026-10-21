@@ -9,7 +9,7 @@ import TaskEditModal from '@/Components/Common/Task/TaskEditModal.vue';
 import { ref, inject, type ComputedRef } from 'vue';
 import { isAllowedToPerformPremiumAction, isPremiumSilenced } from '@/utils/billing';
 import EstimatedTimeProgress from '@/packages/ui/src/EstimatedTimeProgress.vue';
-import UpgradeBadge from '@/Components/Common/UpgradeBadge.vue';
+import UpgradeBadge from '@/packages/ui/src/UpgradeBadge.vue';
 import { formatHumanReadableDuration } from '../../../packages/ui/src/utils/time';
 import type { Organization } from '@/packages/api/src';
 
@@ -56,7 +56,8 @@ const showTaskEditModal = ref(false);
         </div>
         <div class="whitespace-nowrap px-3 flex items-center text-sm text-text-secondary">
             <UpgradeBadge
-                v-if="!isAllowedToPerformPremiumAction() && !isPremiumSilenced()"></UpgradeBadge>
+                v-if="!isAllowedToPerformPremiumAction() && !isPremiumSilenced()"
+                feature="estimates"></UpgradeBadge>
             <EstimatedTimeProgress
                 v-else-if="task.estimated_time"
                 :estimated="task.estimated_time"

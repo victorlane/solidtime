@@ -6,6 +6,7 @@ dist
 /public/storage
 /public/css
 /public/js
+/public/fonts/filament
 /public/vendor
 /lang/vendor
 /storage/*.key
@@ -43,6 +44,7 @@ yarn-error.log
 /data
 /config/caddy
 /config/composer
+/config/psysh
 /AGENTS.md
 
 # Agent worktrees — checkouts of this repo, never part of it

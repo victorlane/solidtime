@@ -14,6 +14,7 @@ use League\Csv\CannotInsertRecord;
 use League\Csv\Exception;
 use League\Csv\UnavailableStream;
 use League\Csv\Writer;
+use LogicException;
 use Spatie\TemporaryDirectory\TemporaryDirectory;
 
 /**
@@ -128,7 +129,7 @@ abstract class CsvExport
     private function validateRow(array $row, array $header): void
     {
         if (array_keys($row) !== $header) {
-            throw new \LogicException('Invalid row');
+            throw new LogicException('Invalid row');
         }
     }
 }

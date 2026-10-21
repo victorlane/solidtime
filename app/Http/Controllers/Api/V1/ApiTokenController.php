@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 use Laravel\Passport\PersonalAccessTokenResult;
+use RuntimeException;
 
 class ApiTokenController extends Controller
 {
@@ -88,7 +89,7 @@ class ApiTokenController extends Controller
             }
 
             return new ApiTokenWithAccessTokenResource($tokenModel, $token->accessToken);
-        } catch (\RuntimeException $exception) {
+        } catch (RuntimeException $exception) {
             report($exception);
             if (Str::contains($exception->getMessage(), ['Personal access client not found'])) {
                 throw new PersonalAccessClientIsNotConfiguredException;

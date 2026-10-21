@@ -20,6 +20,7 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Service\BillingContract;
+use App\Service\GoalsContract;
 use App\Service\IpLookup\IpLookupServiceContract;
 use App\Service\IpLookup\NoIpLookupService;
 use App\Service\PermissionStore;
@@ -28,7 +29,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Support\Generator\SecuritySchemes\OAuthFlow;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -109,6 +110,7 @@ class AppServiceProvider extends ServiceProvider
         // Extensions
         $this->app->bind(IpLookupServiceContract::class, NoIpLookupService::class);
         $this->app->bind(BillingContract::class);
+        $this->app->bind(GoalsContract::class);
 
         // Storage
         // The local driver ignores the ResponseContentDisposition option of temporaryUrl,

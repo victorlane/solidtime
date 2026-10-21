@@ -14,6 +14,7 @@ use App\Models\Task;
 use App\Rules\MaxTimeEntryDuration;
 use App\Rules\RetainerCapNotExceeded;
 use App\Service\PermissionStore;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -28,12 +29,12 @@ class TimeEntryStoreRequest extends BaseFormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<string|\Closure|ValidationRule|\Illuminate\Contracts\Validation\Rule>>
+     * @return array<string, array<string|Closure|ValidationRule|\Illuminate\Contracts\Validation\Rule>>
      */
     public function rules(): array
     {
         return array_merge([
-            // ID of the organization member that the time entry should belong to
+            // ID of the organization member that the time entry should belong to (a member ID from GET /v1/users/me/memberships or the members list, not a user ID)
             'member_id' => [
                 'required',
                 'string',
@@ -90,7 +91,7 @@ class TimeEntryStoreRequest extends BaseFormRequest
                 new MaxTimeEntryDuration($this->input('start')),
                 new RetainerCapNotExceeded,
             ],
-            // Whether time entry is billable
+            // Whether time entry is billable. Not derived from the project: set it to the project's is_billable value to match the web app
             'billable' => [
                 'required',
                 'boolean',
@@ -99,7 +100,7 @@ class TimeEntryStoreRequest extends BaseFormRequest
             // Type of the time entry (work time or a break)
             'type' => [
                 Rule::enum(TimeEntryType::class),
-                function (string $attribute, mixed $value, \Closure $fail): void {
+                function (string $attribute, mixed $value, Closure $fail): void {
                     if ($value === TimeEntryType::Break->value && ! $this->organization->breaks_enabled) {
                         $fail('Breaks are disabled for this organization.');
                     }

@@ -224,6 +224,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
             stopLiveTimer();
         }
         queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
     }
 
     async function resumeWorkAfterBreak(context: ResumeTimeEntryContext) {
@@ -242,6 +243,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
         startLiveTimer();
         await startTimer();
         queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
     }
 
     async function updateTimer() {
@@ -278,6 +280,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
                     stopLiveTimer();
                 }
             }
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
         } else {
             throw new Error(
                 'Failed to fetch current time entry because organization ID is missing.'
@@ -321,6 +324,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
             await stopTimer();
         }
         queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
     }
 
     return {

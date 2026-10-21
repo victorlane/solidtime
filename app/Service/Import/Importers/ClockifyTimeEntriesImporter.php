@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use League\Csv\Exception as CsvException;
 use League\Csv\Reader;
+use Override;
 
 class ClockifyTimeEntriesImporter extends DefaultImporter
 {
@@ -44,7 +45,7 @@ class ClockifyTimeEntriesImporter extends DefaultImporter
     /**
      * @throws ImportException
      */
-    #[\Override]
+    #[Override]
     public function importData(string $data, string $timezone): void
     {
         try {
@@ -103,6 +104,7 @@ class ClockifyTimeEntriesImporter extends DefaultImporter
                 }
                 $taskId = null;
                 if (! $isBreak && $taskKey !== null && $record[$taskKey] !== '') {
+                    $this->checkTaskNameLength($record[$taskKey]);
                     $taskId = $this->taskImportHelper->getKey([
                         'name' => $record[$taskKey],
                         'project_id' => $projectId,
@@ -126,7 +128,7 @@ class ClockifyTimeEntriesImporter extends DefaultImporter
                     if (! in_array($record['Billable'], ['Yes', 'No'], true)) {
                         throw new ImportException('Invalid billable value');
                     }
-                    $timeEntry->billable = $record['Billable'] === 'Yes';
+                    $timeEntry->billable = $this->canUseBillableRates && $record['Billable'] === 'Yes';
                 }
                 if ($isBreak) {
                     // Breaks can not be billable or belong to a project/task (already skipped above)
@@ -188,6 +190,9 @@ class ClockifyTimeEntriesImporter extends DefaultImporter
                 if ($end === null) {
                     throw new ImportException('End date ("'.$endDateStr.'") or time ("'.$endTimeStr.'") are invalid');
                 }
+                if ($end->lt($start)) {
+                    throw new ImportException('End ("'.$endStr.'") is before start ("'.$startStr.'")');
+                }
                 $timeEntry->end = $end->utc();
 
                 $timeEntry->billable_rate = $this->billableRateService->getBillableRateForTimeEntryWithGivenRelations(
@@ -227,7 +232,6 @@ class ClockifyTimeEntriesImporter extends DefaultImporter
             'Project',
             'Description',
             'User',
-            'Group',
             'Email',
             'Tags',
             'Start Date',
@@ -262,13 +266,13 @@ class ClockifyTimeEntriesImporter extends DefaultImporter
         return null;
     }
 
-    #[\Override]
+    #[Override]
     public function getName(): string
     {
         return __('importer.clockify_time_entries.name');
     }
 
-    #[\Override]
+    #[Override]
     public function getDescription(): string
     {
         return __('importer.clockify_time_entries.description');

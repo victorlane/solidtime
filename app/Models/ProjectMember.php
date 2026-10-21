@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\AuditableThroughParent;
 use App\Models\Concerns\CustomAuditable;
 use App\Models\Concerns\HasUuids;
 use Database\Factories\ProjectMemberFactory;
@@ -30,7 +31,7 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * @method static Builder<ProjectMember> whereBelongsToOrganization(Organization $organization)
  * @method static ProjectMemberFactory factory()
  */
-class ProjectMember extends Model implements AuditableContract
+class ProjectMember extends Model implements AuditableContract, AuditableThroughParent
 {
     use CustomAuditable;
 
@@ -83,5 +84,13 @@ class ProjectMember extends Model implements AuditableContract
         $builder->whereHas('project', static function (Builder $query) use ($organization): void {
             $query->whereBelongsTo($organization, 'organization');
         });
+    }
+
+    /**
+     * @return BelongsTo<Project, $this>
+     */
+    public function getAuditParentRelation(): BelongsTo
+    {
+        return $this->project();
     }
 }
