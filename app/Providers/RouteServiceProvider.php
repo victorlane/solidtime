@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Http\Controllers\Web\HealthCheckController;
+use App\Models\User;
+use App\Service\Auth\ActorResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -32,9 +34,22 @@ class RouteServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            return $request->user()
-                ? Limit::perMinute(config('app.api_rate_limit_authenticated_per_minute'))->by($request->user()->id)
-                : Limit::perMinute(config('app.api_rate_limit_guest_per_minute'))->by($request->ip());
+            $user = $request->user();
+            if ($user instanceof User) {
+                // Organization owners are exempt from the API rate limit
+                if ($user->ownedOrganizations()->exists()) {
+                    return Limit::none();
+                }
+
+                return Limit::perMinute(config('app.api_rate_limit_authenticated_per_minute'))->by($user->getKey());
+            }
+
+            $organizationApiKey = app(ActorResolver::class)->organizationApiKey();
+            if ($organizationApiKey !== null) {
+                return Limit::perMinute(config('app.api_rate_limit_authenticated_per_minute'))->by('organization-api-key:'.$organizationApiKey->getKey());
+            }
+
+            return Limit::perMinute(config('app.api_rate_limit_guest_per_minute'))->by($request->ip());
         });
 
         $this->routes(function (): void {

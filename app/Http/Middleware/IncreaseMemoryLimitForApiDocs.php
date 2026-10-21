@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Service\MemoryLimit;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,38 +24,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class IncreaseMemoryLimitForApiDocs
 {
-    private const REQUIRED_MEMORY_LIMIT = '512M';
+    public const string REQUIRED_MEMORY_LIMIT = '512M';
 
     public function handle(Request $request, Closure $next): Response
     {
-        $currentLimitInBytes = $this->toBytes(ini_get('memory_limit'));
-
-        // A limit of 0 or less means "unlimited", in which case there is nothing to raise.
-        if ($currentLimitInBytes > 0 && $currentLimitInBytes < $this->toBytes(self::REQUIRED_MEMORY_LIMIT)) {
-            ini_set('memory_limit', self::REQUIRED_MEMORY_LIMIT);
-        }
+        MemoryLimit::raiseTo(self::REQUIRED_MEMORY_LIMIT);
 
         return $next($request);
-    }
-
-    /**
-     * Resolve a php.ini shorthand byte value (`512M`, `1G`, `-1`) to bytes.
-     */
-    private function toBytes(string $value): int
-    {
-        $value = trim($value);
-
-        if ($value === '') {
-            return 0;
-        }
-
-        $amount = (int) $value;
-
-        return match (strtolower(substr($value, -1))) {
-            'g' => $amount * 1024 * 1024 * 1024,
-            'm' => $amount * 1024 * 1024,
-            'k' => $amount * 1024,
-            default => $amount,
-        };
     }
 }

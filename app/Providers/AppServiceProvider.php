@@ -57,6 +57,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Warm and clear the cached OpenAPI document together with the framework caches
+        $this->optimizes(optimize: 'api-docs:cache', clear: 'scramble:clear', key: 'api-docs');
+
         if ($this->app->environment('local')) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);

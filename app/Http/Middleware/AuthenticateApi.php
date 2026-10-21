@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Service\Auth\ActorResolver;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,8 +23,12 @@ use Symfony\Component\HttpFoundation\Response;
  * Only organization API keys are accepted. Any other client credentials token, such as one issued
  * to a first party client, is rejected, so this does not quietly widen access to every client that
  * happens to hold the grant.
+ *
+ * Implementing AuthenticatesRequests is what places this middleware before ThrottleRequests in the
+ * kernel's middleware priority. Without it the `api` rate limiter ran before anybody was
+ * authenticated, saw no user and counted every API request against the per IP guest limit.
  */
-class AuthenticateApi
+class AuthenticateApi implements AuthenticatesRequests
 {
     public function __construct(
         private readonly ActorResolver $actorResolver,

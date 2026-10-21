@@ -95,6 +95,16 @@ MD,
     ],
 
     /*
+     * Cache for the generated OpenAPI document. Without it every request to the documentation routes
+     * statically analyses all API controllers. `php artisan optimize` warms it (see the
+     * `api-docs:cache` command) and `php artisan optimize:clear` empties it.
+     */
+    'cache' => [
+        'key' => 'scramble.openapi',
+        'store' => env('SCRAMBLE_CACHE_STORE', 'file'),
+    ],
+
+    /*
      * Middleware applied to the API documentation routes (`/docs/api` and `/docs/api.json`).
      *
      * The documentation describes the same API that every organization member can call with their
