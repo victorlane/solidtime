@@ -15,7 +15,7 @@
 ARG FRANKENPHP_VERSION=1.11
 ARG PHP_VERSION=8.3
 
-FROM node:20-trixie-slim AS node
+FROM node:24-trixie-slim AS node
 
 FROM gotenberg/gotenberg:8 AS gotenberg
 
