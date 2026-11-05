@@ -55,11 +55,16 @@ function confirmEndTime() {
 
 // setQuickDuration applies an "N hours" pick. For a finished entry the end
 // moves to start + N. For a running entry (no end yet) N means "I have been
-// working N hours": the start moves to now - N and the timer keeps running.
+// working N hours": the entry is stopped at the current minute and the start
+// moves to N hours before that. Stopping it keeps the duration at exactly N
+// hours; leaving it running would let seconds accumulate on top, which then
+// leak into invoices.
 function setQuickDuration(hours: number) {
     const minutes = Math.round(hours * 60);
     if (props.end === null && !showEndTimePicker.value) {
-        tempStart.value = getDayJsInstance()().subtract(minutes, 'm').format();
+        const end = getDayJsInstance()().startOf('minute');
+        tempStart.value = end.subtract(minutes, 'm').format();
+        tempEnd.value = end.format();
     } else {
         tempEnd.value = getDayJsInstance()(tempStart.value).add(minutes, 'm').format();
     }

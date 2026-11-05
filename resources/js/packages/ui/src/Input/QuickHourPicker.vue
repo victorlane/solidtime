@@ -5,8 +5,8 @@ import { Button } from '@/packages/ui/src/Buttons';
 // QuickHourPicker renders a row of 1..12 hour chips plus a free numeric
 // input, and emits the chosen duration in hours. It deliberately knows
 // nothing about start/end semantics — the parent decides whether N hours
-// means "end = start + N" (finished entry) or "start = now - N" (running
-// timer), so the same component fits every picker surface.
+// means "end = start + N" (finished entry) or "stop now, start = now - N"
+// (running timer), so the same component fits every picker surface.
 const emit = defineEmits<{
     select: [hours: number];
 }>();
